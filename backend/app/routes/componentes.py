@@ -58,7 +58,11 @@ def listar_todos_componentes(
     session: Session = Depends(get_session),
     usuario_atual: Usuario = Depends(obter_usuario_atual)
 ):
-    query = select(Componente).where(Componente.ativo == True)
+    query = (
+        select(Componente)
+        .join(Equipamento, Componente.equipamento_id == Equipamento.id)
+        .where(Componente.ativo == True, Equipamento.ativo == True)
+    )
     if equipamento_id:
         query = query.where(Componente.equipamento_id == equipamento_id)
     if prioridade:
@@ -110,6 +114,8 @@ def obter_componente_detalhe(
 ):
     c = session.get(Componente, componente_id)
     if not c or not c.ativo:
+        raise HTTPException(status_code=404, detail="Componente não encontrado")
+    if not c.equipamento or not c.equipamento.ativo:
         raise HTTPException(status_code=404, detail="Componente não encontrado")
         
     etapas = []
