@@ -126,6 +126,14 @@ export const API = {
         });
         return handleResponse(response);
     },
+
+    async deletarEquipamento(id) {
+        const response = await fetch(`${API_BASE_URL}/equipamentos/${id}`, {
+            method: "DELETE",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
     
     // Componentes
     async getComponentes(params = {}) {
@@ -154,6 +162,14 @@ export const API = {
     async retornarEtapa(id) {
         const response = await fetch(`${API_BASE_URL}/componentes/${id}/retornar-etapa`, {
             method: "PATCH",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    async deletarComponente(id) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${id}`, {
+            method: "DELETE",
             headers: getHeaders()
         });
         return handleResponse(response);
