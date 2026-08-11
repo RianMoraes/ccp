@@ -220,12 +220,22 @@ def deletar_equipamento(
     eq = session.get(Equipamento, equipamento_id)
     if not eq or not eq.ativo:
         raise HTTPException(status_code=404, detail="Equipamento não encontrado")
-    
+
     eq.ativo = False
     eq.atualizado_em = datetime.utcnow()
     session.add(eq)
+
+    # Cascata: desativa também os componentes vinculados (evita órfãos ativos)
+    componentes = session.exec(
+        select(Componente).where(Componente.equipamento_id == eq.id, Componente.ativo == True)
+    ).all()
+    for c in componentes:
+        c.ativo = False
+        c.atualizado_em = datetime.utcnow()
+        session.add(c)
+
     session.commit()
-    return {"message": "Equipamento deletado com sucesso (soft delete)"}
+    return {"message": f"Equipamento e {len(componentes)} componente(s) vinculado(s) deletados com sucesso (soft delete)"}
 
 @router.patch("/{equipamento_id}/prazo")
 def atualizar_prazo_equipamento(
