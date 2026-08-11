@@ -86,17 +86,12 @@ def obter_resumo_dashboard(session: Session = Depends(get_session)):
 
 @app.get("/api/dashboard/prioridade-dia", tags=["Dashboard"])
 def obter_prioridade_dia(session: Session = Depends(get_session)):
-    """Retorna as prioridades do dia (RF-01) - equipamentos com prazo de até 7 dias."""
-    hoje = date.today()
-    limite = hoje + timedelta(days=7)
-
+    """Retorna as prioridades do dia (RF-01) - equipamentos com prazo mais próximo."""
     prioritarios = session.exec(
         select(Equipamento).where(
             Equipamento.ativo == True,
-            Equipamento.status == "em_producao",
-            Equipamento.data_entrega != None,
-            Equipamento.data_entrega <= limite
-        ).order_by(Equipamento.data_entrega)
+            Equipamento.status == "em_producao"
+        ).order_by(Equipamento.data_entrega).limit(5)
     ).all()
 
     if not prioritarios:
@@ -116,25 +111,25 @@ def obter_prioridade_dia(session: Session = Depends(get_session)):
                 bloqueio_critico = c.observacoes or "Componente paralisado por pendência"
                 break
 
-        dias_restantes = max((prioritario.data_entrega - hoje).days, 0)
+        dias_restantes = 0
+        if prioritario.data_entrega:
+            dias_restantes = max((prioritario.data_entrega - date.today()).days, 0)
 
         resultado.append({
             "id": prioritario.id,
             "nome": prioritario.nome,
             "op": prioritario.op,
-            "rv": prioritario.rv,
             "dias_prazo": dias_restantes,
             "bloqueio": bloqueio_critico,
             "bloqueado": possui_bloqueio
         })
 
     return resultado
-
 @app.get("/api/dashboard/producao-por-etapa", tags=["Dashboard"])
 def obter_producao_por_etapa(session: Session = Depends(get_session)):
     """Retorna totais de componentes em cada etapa de produção (RF-03), dinâmico conforme as etapas reais em uso."""
     componentes = session.exec(
-        select(Componente).where(Componente.ativo == True, Componente.etapa_atual_id != None)
+        select(Componente).where(Componente.ativo == True, Equipamento.ativo == True, Componente.etapa_atual_id != None)
     ).all()
 
     resumo_map = {}
