@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pathlib import Path
 from app.database import init_db
+from app.seed import run_seed
 from app.routes import auth, clientes, equipamentos, componentes, pendencias, export, busca, usuarios, modelos_fluxo
 from sqlmodel import Session, select
 from app.database import get_session
@@ -30,6 +31,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     init_db()
+    run_seed()  # idempotente: só insere dados se o banco estiver vazio
 
 # Registro de Rotas da API
 app.include_router(auth.router)
@@ -86,74 +88,69 @@ def obter_resumo_dashboard(session: Session = Depends(get_session)):
 
 @app.get("/api/dashboard/prioridade-dia", tags=["Dashboard"])
 def obter_prioridade_dia(session: Session = Depends(get_session)):
-    """Retorna as prioridades do dia (RF-01) - equipamentos com prazo de até 7 dias."""
-    hoje = date.today()
-    limite = hoje + timedelta(days=7)
-
-    prioritarios = session.exec(
+    """Retorna a prioridade do dia (RF-01) - O equipamento que será carregado/expedido no dia ou mais próximo."""
+    # Procura o primeiro equipamento ativo em produção com o prazo mais curto
+    prioritario = session.exec(
         select(Equipamento).where(
             Equipamento.ativo == True,
-            Equipamento.status == "em_producao",
-            Equipamento.data_entrega != None,
-            Equipamento.data_entrega <= limite
+            Equipamento.status == "em_producao"
         ).order_by(Equipamento.data_entrega)
+    ).first()
+    
+    if not prioritario:
+        return None
+        
+    # Verificar se possui algum componente bloqueado
+    componentes = session.exec(
+        select(Componente).where(Componente.equipamento_id == prioritario.id, Componente.ativo == True)
     ).all()
-
-    if not prioritarios:
-        return []
-
-    resultado = []
-    for prioritario in prioritarios:
-        componentes = session.exec(
-            select(Componente).where(Componente.equipamento_id == prioritario.id, Componente.ativo == True)
-        ).all()
-
-        bloqueio_critico = "Nenhuma pendência ativa"
-        possui_bloqueio = False
-        for c in componentes:
-            if c.status == StatusComponenteEnum.BLOQUEADO:
-                possui_bloqueio = True
-                bloqueio_critico = c.observacoes or "Componente paralisado por pendência"
-                break
-
-        dias_restantes = max((prioritario.data_entrega - hoje).days, 0)
-
-        resultado.append({
-            "id": prioritario.id,
-            "nome": prioritario.nome,
-            "op": prioritario.op,
-            "rv": prioritario.rv,
-            "dias_prazo": dias_restantes,
-            "bloqueio": bloqueio_critico,
-            "bloqueado": possui_bloqueio
-        })
-
-    return resultado
+    
+    bloqueio_critico = "Nenhuma pendência ativa"
+    possui_bloqueio = False
+    for c in componentes:
+        if c.status == StatusComponenteEnum.BLOQUEADO:
+            possui_bloqueio = True
+            bloqueio_critico = c.observacoes or "Componente paralisado por pendência"
+            break
+            
+    dias_restantes = 0
+    if prioritario.data_entrega:
+        dias_restantes = max((prioritario.data_entrega - date.today()).days, 0)
+        
+    return {
+        "id": prioritario.id,
+        "nome": prioritario.nome,
+        "op": prioritario.op,
+        "dias_prazo": dias_restantes,
+        "bloqueio": bloqueio_critico,
+        "bloqueado": possui_bloqueio
+    }
 
 @app.get("/api/dashboard/producao-por-etapa", tags=["Dashboard"])
 def obter_producao_por_etapa(session: Session = Depends(get_session)):
-    """Retorna totais de componentes em cada etapa de produção (RF-03), dinâmico conforme as etapas reais em uso."""
-    componentes = session.exec(
-        select(Componente).where(Componente.ativo == True, Componente.etapa_atual_id != None)
-    ).all()
+    """Retorna totais de componentes em cada etapa de produção (RF-03).
+    Dinâmico: usa os nomes REAIS das etapas em uso (cada componente pode ter
+    fluxo padrão ou personalizado - RN-005), em vez de uma lista fixa de 5 nomes."""
+    componentes = session.exec(select(Componente).where(Componente.ativo == True)).all()
 
-    resumo_map = {}
+    info_por_etapa = {}  # nome_etapa -> {"total": int, "criticos": int, "min_ordem": int}
     for c in componentes:
+        if not c.etapa_atual_id:
+            continue
         etapa_real = session.get(Etapa, c.etapa_atual_id)
         if not etapa_real:
             continue
 
-        nome = etapa_real.nome
-        if nome not in resumo_map:
-            resumo_map[nome] = {"etapa": nome, "total": 0, "criticos": 0, "_ordem": etapa_real.ordem}
-
-        resumo_map[nome]["total"] += 1
+        info = info_por_etapa.setdefault(etapa_real.nome, {"total": 0, "criticos": 0, "min_ordem": etapa_real.ordem})
+        info["total"] += 1
+        info["min_ordem"] = min(info["min_ordem"], etapa_real.ordem)
         if c.prioridade in ["alta", "urgente", "critica"] or c.status == StatusComponenteEnum.BLOQUEADO:
-            resumo_map[nome]["criticos"] += 1
+            info["criticos"] += 1
 
-    resumo = sorted(resumo_map.values(), key=lambda x: x["_ordem"])
-    for item in resumo:
-        item.pop("_ordem")
+    resumo = [
+        {"etapa": nome, "total": dados["total"], "criticos": dados["criticos"]}
+        for nome, dados in sorted(info_por_etapa.items(), key=lambda kv: (kv[1]["min_ordem"], kv[0]))
+    ]
     return resumo
 
 @app.get("/", tags=["Geral"], include_in_schema=False)
