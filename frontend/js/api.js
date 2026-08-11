@@ -5,7 +5,7 @@ function getAuthToken() {
     return localStorage.getItem("ccp_token");
 }
 
-// Configura os cabeÃ§alhos das requisiÃ§Ãµes padrÃ£o
+// Configura os cabeçalhos das requisições padrão
 function getHeaders(contentType = "application/json") {
     const token = getAuthToken();
     const headers = {};
@@ -21,21 +21,21 @@ function getHeaders(contentType = "application/json") {
 // Verifica e trata respostas HTTP
 async function handleResponse(response) {
     if (response.status === 401) {
-        // Token expirado ou invÃ¡lido
+        // Token expirado ou inválido
         localStorage.removeItem("ccp_token");
         localStorage.removeItem("ccp_user");
         if (!window.location.pathname.includes("login.html")) {
             window.location.href = "login.html";
         }
-        throw new Error("SessÃ£o expirada. FaÃ§a login novamente.");
+        throw new Error("Sessão expirada. Faça login novamente.");
     }
     
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Erro na comunicaÃ§Ã£o com a API");
+        throw new Error(errorData.detail || "Erro na comunicação com a API");
     }
     
-    // Se for um arquivo de exportaÃ§Ã£o (Excel), retorna o blob
+    // Se for um arquivo de exportação (Excel), retorna o blob
     const contentDisposition = response.headers.get("content-disposition");
     if (contentDisposition && contentDisposition.includes("attachment")) {
         return response.blob();
@@ -45,7 +45,7 @@ async function handleResponse(response) {
 }
 
 export const API = {
-    // AutenticaÃ§Ã£o
+    // Autenticação
     async login(username, password) {
         const params = new URLSearchParams();
         params.append("username", username);
@@ -56,13 +56,8 @@ export const API = {
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: params
         });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || "Erro ao fazer login. Verifique suas credenciais.");
-        }
-
-        const data = await response.json();
+        
+        const data = await handleResponse(response);
         localStorage.setItem("ccp_token", data.access_token);
         localStorage.setItem("ccp_user", JSON.stringify(data.usuario));
         return data;
@@ -126,7 +121,7 @@ export const API = {
         });
         return handleResponse(response);
     },
-
+    
     async deletarEquipamento(id) {
         const response = await fetch(`${API_BASE_URL}/equipamentos/${id}`, {
             method: "DELETE",
@@ -135,6 +130,15 @@ export const API = {
         return handleResponse(response);
     },
     
+    // AJUSTE DE EDICAO DE DATA: Atualiza a data de entrega do equipamento
+    async atualizarPrazoEquipamento(id, novaData) {
+        const response = await fetch(`${API_BASE_URL}/equipamentos/${id}/prazo?nova_data=${novaData}`, {
+            method: "PATCH",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
     // Componentes
     async getComponentes(params = {}) {
         const urlParams = new URLSearchParams(params).toString();
@@ -151,6 +155,15 @@ export const API = {
         return handleResponse(response);
     },
     
+    // AJUSTE DE EDICAO DE DATA: Atualiza a data prevista do componente
+    async atualizarPrazoComponente(id, novaData) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${id}/prazo?nova_data=${novaData}`, {
+            method: "PATCH",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
     async avancarEtapa(id) {
         const response = await fetch(`${API_BASE_URL}/componentes/${id}/avancar-etapa`, {
             method: "PATCH",
@@ -166,14 +179,6 @@ export const API = {
         });
         return handleResponse(response);
     },
-
-    async deletarComponente(id) {
-        const response = await fetch(`${API_BASE_URL}/componentes/${id}`, {
-            method: "DELETE",
-            headers: getHeaders()
-        });
-        return handleResponse(response);
-    },
     
     async alterarPrioridade(id, prioridade) {
         const response = await fetch(`${API_BASE_URL}/componentes/${id}/prioridade?nova_prioridade=${prioridade}`, {
@@ -183,7 +188,33 @@ export const API = {
         return handleResponse(response);
     },
     
-    // Pendencias
+    async criarComponente(dados) {
+        const response = await fetch(`${API_BASE_URL}/componentes`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify(dados)
+        });
+        return handleResponse(response);
+    },
+
+    async atualizarFluxo(id, etapasNomes) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${id}/fluxo`, {
+            method: "PUT",
+            headers: getHeaders(),
+            body: JSON.stringify(etapasNomes)
+        });
+        return handleResponse(response);
+    },
+
+    async deletarComponente(id) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${id}`, {
+            method: "DELETE",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+    
+    // Pendências
     async criarPendencia(dados) {
         const response = await fetch(`${API_BASE_URL}/pendencias`, {
             method: "POST",
@@ -216,12 +247,11 @@ export const API = {
         return handleResponse(response);
     },
     
-    // ExportaÃ§Ã£o Excel
+    // Exportação Excel
     async exportarExcel() {
         const response = await fetch(`${API_BASE_URL}/export/excel`, {
-            headers: getHeaders(null) // CabeÃ§alho Content-Type vazio
+            headers: getHeaders(null) // Cabeçalho Content-Type vazio
         });
         return handleResponse(response);
     }
 };
-
