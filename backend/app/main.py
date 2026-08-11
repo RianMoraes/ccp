@@ -129,7 +129,13 @@ def obter_prioridade_dia(session: Session = Depends(get_session)):
 def obter_producao_por_etapa(session: Session = Depends(get_session)):
     """Retorna totais de componentes em cada etapa de produção (RF-03), dinâmico conforme as etapas reais em uso."""
     componentes = session.exec(
-        select(Componente).where(Componente.ativo == True, Equipamento.ativo == True, Componente.etapa_atual_id != None)
+        select(Componente)
+        .join(Equipamento, Componente.equipamento_id == Equipamento.id)
+        .where(
+            Componente.ativo == True,
+            Equipamento.ativo == True,
+            Componente.etapa_atual_id != None
+        )
     ).all()
 
     resumo_map = {}
@@ -150,7 +156,6 @@ def obter_producao_por_etapa(session: Session = Depends(get_session)):
     for item in resumo:
         item.pop("_ordem")
     return resumo
-
 @app.get("/", tags=["Geral"], include_in_schema=False)
 def index():
     """Redireciona para a tela de login do frontend."""
