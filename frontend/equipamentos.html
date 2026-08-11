@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipamentos - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            <div class="flex flex-col gap-3">
+                <div class="flex justify-between items-center flex-wrap gap-3">
+                    <div class="flex gap-4">
+                        <button id="btn-novo-equipamento" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm flex items-center gap-2 transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">add</span> Novo Equipamento
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Crítico (≤ 5 dias)</span>
+                        <span class="flex items-center gap-1 ml-4"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Alerta (≤ 15 dias)</span>
+                        <span class="flex items-center gap-1 ml-4"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Normal</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap bg-white p-3 rounded-xl border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <label for="filtro-cliente" class="text-[10px] font-bold text-slate-500 uppercase">Cliente</label>
+                        <input id="filtro-cliente" type="text" placeholder="Buscar cliente..." class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-40">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="filtro-nome-equip" class="text-[10px] font-bold text-slate-500 uppercase">Equipamento</label>
+                        <input id="filtro-nome-equip" type="text" placeholder="Buscar equipamento..." class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="filtro-rv" class="text-[10px] font-bold text-slate-500 uppercase">RV</label>
+                        <input id="filtro-rv" type="text" placeholder="Buscar RV..." class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-32">
+                    </div>
+                    <button id="btn-limpar-filtros-eq" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">filter_alt_off</span> Limpar
+                    </button>
+                    <span id="filtro-preset-badge" class="hidden px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold items-center gap-1"></span>
+                </div>
+            </div>
+
+            <!-- Lista de Equipamentos (RF-08) -->
+            <div id="lista-equipamentos" class="flex flex-col gap-4">
+                <!-- Inserido dinamicamente via JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Gaveta Lateral de Detalhes do Componente (RF-23, RF-24) -->
+    <div id="drawer-componente" class="fixed inset-y-0 right-0 w-[550px] bg-white border-l border-slate-200 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto p-6 hidden flex flex-col gap-6">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+            <div>
+                <span id="drawer-componente-equip" class="text-[10px] font-bold text-slate-400 uppercase">Equipamento</span>
+                <h3 id="drawer-componente-nome" class="text-lg font-bold text-slate-800">Nome do Componente</h3>
+            </div>
+            <button id="drawer-btn-fechar" class="p-1 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <!-- Indicadores Rápidos -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">OP / RV</span>
+                <span id="drawer-componente-op-rv" class="text-xs font-bold text-slate-700">N/A</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prazo do Componente</span>
+                <input type="date" 
+                       id="drawer-componente-prazo-input" 
+                       onchange="alterarPrazoComponente(activeComponentId, this.value)"
+                       class="w-full px-2 py-1 border border-slate-200 rounded text-xs font-bold text-slate-700">
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Status da Etapa</span>
+                <span id="drawer-componente-status" class="px-2 py-0.5 rounded text-xs font-bold uppercase">EM ANDAMENTO</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prioridade</span>
+                <span id="drawer-componente-prioridade" class="px-2 py-0.5 rounded text-xs font-bold uppercase">NORMAL</span>
+            </div>
+        </div>
+
+        <!-- Ações do PCP (Avançar/Retornar/Bloquear) -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-3">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Ações do PCP</h4>
+            <div class="flex gap-2">
+                <button id="btn-retornar" class="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">undo</span> Retornar Etapa
+                </button>
+                <button id="btn-avancar" class="flex-1 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">redo</span> Avançar Etapa
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-abrir-pendencia-modal" class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">block</span> Sinalizar Bloqueio
+                </button>
+                <button id="btn-customizar-fluxo-componente" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">page_info</span> Customizar Fluxo
+                </button>
+            </div>
+            <button id="btn-excluir-componente" class="w-full py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors mt-1">
+                <span class="material-symbols-outlined text-[16px]">delete</span> Excluir Componente
+            </button>
+        </div>
+
+        <!-- Aba de Controle (Histórico / Desenhos) -->
+        <div class="border-b border-slate-100 flex gap-4">
+            <button id="tab-pendencias" class="border-b-2 border-blue-900 pb-2 text-xs font-bold text-blue-900">Pendências</button>
+            <button id="tab-historico" class="border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400">Histórico de Alterações</button>
+            <button id="tab-desenhos" class="border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400">Desenhos & IDs</button>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div id="drawer-tab-content" class="flex-1">
+            <div id="tab-content-pendencias" class="space-y-3"></div>
+            <div id="tab-content-historico" class="hidden space-y-4"></div>
+            <div id="tab-content-desenhos" class="hidden space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Abertura de Pendência -->
+    <div id="modal-pendencia" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5"><span class="material-symbols-outlined text-red-500">block</span> Abrir Bloqueio/Pendência</h3>
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label for="pendencia-titulo" class="text-[10px] font-bold text-slate-500 uppercase">Título da Ocorrência</label>
+                    <input id="pendencia-titulo" type="text" placeholder="Falta de matéria-prima, etc." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="pendencia-desc" class="text-[10px] font-bold text-slate-500 uppercase">Descrição Detalhada</label>
+                    <textarea id="pendencia-desc" rows="3" placeholder="Especifique o problema..." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="pendencia-bloqueante" type="checkbox" checked class="rounded text-red-500 focus:ring-red-500">
+                    <label for="pendencia-bloqueante" class="text-xs font-bold text-slate-700">Bloquear andamento do componente?</label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="modal-btn-cancelar" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors">Cancelar</button>
+                <button id="modal-btn-salvar" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-xs transition-colors">Confirmar Bloqueio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Equipamento -->
+    <div id="modal-equipamento" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-slate-800">Cadastrar Novo Equipamento</h3>
+            <form id="form-equipamento" class="space-y-3">
+                <div class="space-y-1">
+                    <label for="form-eq-cliente" class="text-[10px] font-bold text-slate-500 uppercase">Cliente</label>
+                    <input id="form-eq-cliente" required list="lista-clientes" autocomplete="off" placeholder="Digite para buscar ou cadastrar um novo cliente" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                    <datalist id="lista-clientes"></datalist>
+                    <input type="hidden" id="form-eq-cliente-id">
+                    <div id="form-eq-cliente-novo-wrap" class="hidden flex items-center gap-2 pt-1">
+                        <span class="text-[10px] font-bold text-blue-700 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">info</span> Cliente novo — informe uma sigla:</span>
+                        <input id="form-eq-cliente-sigla" placeholder="Sigla" maxlength="10" class="w-24 px-2 py-1 border border-slate-200 rounded-lg text-xs uppercase">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label for="form-eq-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome do Equipamento</label>
+                    <input id="form-eq-nome" type="text" required placeholder="Ex: Elevador de Canecas EC-12" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-eq-op" class="text-[10px] font-bold text-slate-500 uppercase">Ordem de Produção (OP)</label>
+                    <input id="form-eq-op" type="text" placeholder="Ex: 00120/26" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+		<div class="space-y-1">
+                    <label for="form-eq-rv" class="text-[10px] font-bold text-slate-500 uppercase">RV</label>
+                    <input id="form-eq-rv" type="text" placeholder="Ex: 00045/25" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-eq-entrega" class="text-[10px] font-bold text-slate-500 uppercase">Data de Entrega</label>
+                    <input id="form-eq-entrega" type="date" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-equipamento').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Novo Componente + Customizador de Fluxo (Prioridade 2) -->
+    <div id="modal-componente" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-lg shadow-2xl space-y-4">
+            <h3 id="modal-componente-title" class="text-base font-bold text-slate-800">Cadastrar Componente</h3>
+            <form id="form-componente" class="space-y-3">
+                <input type="hidden" id="form-comp-equip-id">
+                <input type="hidden" id="form-comp-id">
+                <div class="space-y-1">
+                    <label for="form-comp-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome do Componente</label>
+                    <input id="form-comp-nome" type="text" required placeholder="Ex: Tambor de Retorno" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label for="form-comp-prioridade" class="text-[10px] font-bold text-slate-500 uppercase">Prioridade</label>
+                        <select id="form-comp-prioridade" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                            <option value="normal">Normal</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                            <option value="critica">Crítica</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="form-comp-entrega" class="text-[10px] font-bold text-slate-500 uppercase">Previsão</label>
+                        <input id="form-comp-entrega" type="date" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                </div>
+
+                <!-- Customizador de Fluxo (Prioridade 2) -->
+                <div class="border border-slate-100 p-3 rounded-xl bg-slate-50 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Etapas de Fabricação</span>
+                        <select id="form-comp-template-fluxo" class="border-slate-200 rounded text-[10px] py-0.5 px-2">
+                            <option value="">Carregar Template</option>
+                        </select>
+                    </div>
+                    
+                    <div id="componente-etapas-list" class="space-y-1 max-h-36 overflow-y-auto"></div>
+                    <button type="button" id="btn-comp-add-etapa" class="text-[10px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[14px]">add</span> Adicionar Etapa Personalizada
+                    </button>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-componente').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar Componente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("equipamentos");
+        renderHeader("Gestão de Equipamentos");
+
+        let activeComponentId = null;
+
+        window.alterarPrazoEquipamento = async function(id, novaData) {
+            if (!novaData) return;
+            try {
+                await API.atualizarPrazoEquipamento(id, novaData);
+                await carregarEquipamentos();
+            } catch (err) {
+                alert("Erro ao atualizar prazo do equipamento: " + err.message);
+            }
+        };
+
+        window.alterarPrazoComponente = async function(id, novaData) {
+            if (!novaData) return;
+            try {
+                await API.atualizarPrazoComponente(id, novaData);
+                await carregarEquipamentos();
+                if (activeComponentId === id) {
+                    abrirDrawerComponente(id);
+                }
+            } catch (err) {
+                alert("Erro ao atualizar prazo do componente: " + err.message);
+            }
+        };
+
+        window.excluirEquipamento = async function(id) {
+            if (!confirm("Tem certeza que deseja excluir este equipamento e todos os seus componentes? Esta ação não pode ser desfeita.")) return;
+            try {
+                await API.deletarEquipamento(id);
+                carregarEquipamentos();
+            } catch (err) {
+                alert("Erro ao excluir equipamento: " + err.message);
+            }
+        };
+
+        window.excluirComponente = async function(id) {
+            if (!confirm("Tem certeza que deseja excluir este componente?")) return;
+            try {
+                await API.deletarComponente(id);
+                document.getElementById("drawer-btn-fechar").click();
+                carregarEquipamentos();
+            } catch (err) {
+                alert("Erro ao excluir componente: " + err.message);
+            }
+        };
+
+        document.getElementById("btn-excluir-componente").onclick = () => {
+            if (activeComponentId) excluirComponente(activeComponentId);
+        };
+
+        let todosEquipamentos = [];
+        let filtroPreset = null; // "atraso" | "bloqueio" | "entrega-semana" | null
+        let equipamentosExpandidos = new Set(); // mantém os cards abertos entre recargas da lista
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const expandId = urlParams.get("id");
+        const filtroParam = urlParams.get("filtro"); // atraso | bloqueio | entrega-semana
+
+        if (filtroParam) {
+            filtroPreset = filtroParam;
+            const labels = { "atraso": "Equipamentos em Atraso", "bloqueio": "Com Bloqueio Ativo", "entrega-semana": "Entregas da Semana" };
+            const badge = document.getElementById("filtro-preset-badge");
+            badge.innerText = `Filtro: ${labels[filtroParam] || filtroParam}`;
+            badge.classList.remove("hidden");
+            badge.classList.add("flex");
+        }
+
+        async function carregarEquipamentos() {
+            try {
+                const query = await fetch("/api/equipamentos", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                todosEquipamentos = await query.json();
+                renderizarEquipamentos();
+            } catch (err) {
+                console.error("Erro ao listar equipamentos:", err);
+            }
+        }
+
+       function renderizarEquipamentos() {
+    try {
+        const filtroCliente = document.getElementById("filtro-cliente").value.trim().toLowerCase();
+        const filtroNome = document.getElementById("filtro-nome-equip").value.trim().toLowerCase();
+        const filtroRv = document.getElementById("filtro-rv").value.trim().toLowerCase();
+
+        let equipamentos = todosEquipamentos.filter(eq => {
+            if (filtroCliente && !(eq.cliente_nome || "").toLowerCase().includes(filtroCliente)) return false;
+            if (filtroNome && !(eq.nome || "").toLowerCase().includes(filtroNome)) return false;
+            if (filtroRv && !(eq.rv || "").toLowerCase().includes(filtroRv)) return false;
+            return true;
+        });
+
+        if (filtroPreset === "atraso") {
+            equipamentos = equipamentos.filter(eq => eq.criticidade === "critico" || eq.criticidade === "alerta");
+        } else if (filtroPreset === "bloqueio") {
+            equipamentos = equipamentos.filter(eq => eq.possui_bloqueio);
+        } else if (filtroPreset === "entrega-semana") {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const limite = new Date(hoje); limite.setDate(limite.getDate() + 7);
+            equipamentos = equipamentos.filter(eq => {
+                if (!eq.data_entrega) return false;
+                const d = new Date(eq.data_entrega);
+                return d >= hoje && d <= limite;
+            });
+        }
+
+        const container = document.getElementById("lista-equipamentos");
+
+        if (equipamentos.length === 0) {
+            container.innerHTML = `<p class="text-sm text-slate-500 italic p-6 bg-white rounded-xl border border-slate-200">Nenhum equipamento encontrado para os filtros selecionados.</p>`;
+            return;
+        }
+
+        container.innerHTML = "";
+        
+        for (const eq of equipamentos) {
+            let bordaColor = "border-l-green-500";
+            let badgeColor = "bg-green-500 text-white";
+            if (eq.criticidade === "critico") {
+                bordaColor = "border-l-red-500";
+                badgeColor = "bg-red-500 text-white";
+            } else if (eq.criticidade === "alerta") {
+                bordaColor = "border-l-amber-500";
+                badgeColor = "bg-amber-500 text-slate-900";
+            }
+
+            const eqHtml = `
+            <div id="eq-card-${eq.id}" class="bg-white rounded-xl border-l-4 ${bordaColor} border-t border-r border-b border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 bg-slate-50 hover:bg-slate-100 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 cursor-pointer">
+                    <div class="flex-1 min-w-[300px]" onclick="toggleExpand('${eq.id}')">
+                        <div class="flex items-center gap-3">
+                            <h2 class="font-bold text-slate-800 text-base">${eq.nome}</h2>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase ${badgeColor}">${eq.criticidade.toUpperCase()}</span>
+                        </div>
+                        <div class="flex items-center gap-4 mt-1">
+                            <span class="text-xs text-slate-500 font-medium">Cliente: <span class="text-slate-700 font-semibold">${eq.cliente_nome}</span></span>
+                            <div class="flex items-center gap-1 text-xs text-slate-500 font-medium" onclick="event.stopPropagation()">
+                                <label class="font-semibold">Prazo:</label>
+                                <input type="date" 
+                                       value="${eq.data_entrega ? eq.data_entrega.split('T')[0] : ''}" 
+                                       onchange="alterarPrazoEquipamento('${eq.id}', this.value)"
+                                       class="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700 focus:ring-1 focus:ring-blue-900">
+                            </div>
+                            <span class="text-xs text-slate-500 font-medium">OP: <span class="text-slate-700 font-bold">${eq.op || 'N/A'}</span></span>
+                            <span class="text-xs text-slate-500 font-medium">RV: <span class="text-slate-700 font-bold">${eq.rv || 'N/A'}</span></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Percentual Geral</span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-32 bg-slate-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-blue-900 h-full rounded-full" style="width: ${eq.percentual_geral}%"></div>
+                                </div>
+                                <span class="text-sm font-bold text-blue-900">${eq.percentual_geral}%</span>
+                            </div>
+                        </div>
+                        <button onclick="abrirModalComponente('${eq.id}')" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-700 text-white rounded text-[11px] font-bold flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-[14px]">add</span> Novo Componente
+                        </button>
+                        <a href="equipamento-detalhe.html?id=${eq.id}" onclick="event.stopPropagation()" class="px-2.5 py-1 bg-blue-900 hover:bg-blue-800 text-white rounded text-[11px] font-bold flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-[14px]">open_in_new</span> Ver Detalhes
+                        </a>
+                        <button onclick="excluirEquipamento('${eq.id}')" class="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Excluir Equipamento">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                        <span id="arrow-${eq.id}" class="material-symbols-outlined text-slate-400" onclick="toggleExpand('${eq.id}')">expand_more</span>
+                    </div>
+                </div>
+                <div id="details-${eq.id}" class="hidden overflow-x-auto"></div>
+            </div>
+            `;
+            container.insertAdjacentHTML("beforeend", eqHtml);
+        }
+
+        const idsParaReabrir = new Set(equipamentosExpandidos);
+        if (expandId) idsParaReabrir.add(expandId);
+        idsParaReabrir.forEach(id => {
+            if (document.getElementById(`eq-card-${id}`)) {
+                toggleExpand(id);
+            }
+        });
+
+    } catch (err) {
+        console.error("Erro ao listar equipamentos:", err);
+    }
+}
+document.getElementById("filtro-cliente").addEventListener("input", renderizarEquipamentos);
+        document.getElementById("filtro-nome-equip").addEventListener("input", renderizarEquipamentos);
+        document.getElementById("filtro-rv").addEventListener("input", renderizarEquipamentos);
+        document.getElementById("btn-limpar-filtros-eq").addEventListener("click", () => {
+            document.getElementById("filtro-cliente").value = "";
+            document.getElementById("filtro-nome-equip").value = "";
+            document.getElementById("filtro-rv").value = "";
+            filtroPreset = null;
+            document.getElementById("filtro-preset-badge").classList.add("hidden");
+            renderizarEquipamentos();
+        });
+        window.toggleExpand = async function(id) {
+            const detailsDiv = document.getElementById(`details-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            
+            if (!detailsDiv.classList.contains("hidden")) {
+                detailsDiv.classList.add("hidden");
+                arrow.innerText = "expand_more";
+                equipamentosExpandidos.delete(id);
+                return;
+            }
+
+            try {
+                const eq = await API.getEquipamentoDetalhes(id);
+                
+                let tableHtml = `
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Nome do Componente</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Etapa Atual</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">Status</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">Progresso</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">Prioridade</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Pendências / Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                `;
+
+                if (eq.componentes.length === 0) {
+                    tableHtml += `<tr><td colspan="6" class="px-4 py-4 text-xs italic text-slate-500 text-center">Nenhum componente vinculado.</td></tr>`;
+                } else {
+                    tableHtml += eq.componentes.map(c => {
+                        let statusColor = "bg-green-50 text-green-600 border-green-200";
+                        if (c.status === "bloqueado") {
+                            statusColor = "bg-red-50 text-red-600 border-red-200 animate-pulse";
+                        } else if (c.status === "nao_iniciado") {
+                            statusColor = "bg-slate-50 text-slate-600 border-slate-200";
+                        } else if (c.status === "aguardando") {
+                            statusColor = "bg-amber-50 text-amber-600 border-amber-200";
+                        }
+                        
+                        let priorityIcon = "expand";
+                        let priorityColor = "text-slate-400";
+                        if (c.prioridade === "critica" || c.prioridade === "urgente") {
+                            priorityIcon = "priority_high";
+                            priorityColor = "text-red-500 font-bold";
+                        } else if (c.prioridade === "alta") {
+                            priorityIcon = "keyboard_double_arrow_up";
+                            priorityColor = "text-amber-500";
+                        }
+
+                        return `
+                        <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="abrirDrawerComponente('${c.id}')">
+                            <td class="px-4 py-3 text-xs font-bold text-slate-800">${c.nome}</td>
+                            <td class="px-4 py-3 text-xs text-slate-600">${c.etapa_atual ? c.etapa_atual.nome : 'Listagem'}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor}">
+                                    ${c.status.replace("_", " ").toUpperCase()}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-blue-900 h-full" style="width: ${c.percentual}%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-blue-900">${c.percentual}%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="material-symbols-outlined text-sm ${priorityColor}">${priorityIcon}</span>
+                            </td>
+                            <td class="px-4 py-3 text-[10px] text-slate-500 italic truncate max-w-[200px]">${c.observacoes || 'Nenhuma'}</td>
+                        </tr>
+                        `;
+                    }).join("");
+                }
+
+                tableHtml += `</tbody></table>`;
+                detailsDiv.innerHTML = tableHtml;
+                detailsDiv.classList.remove("hidden");
+                arrow.innerText = "expand_less";
+                equipamentosExpandidos.add(id);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        window.abrirDrawerComponente = async function(componenteId) {
+            activeComponentId = componenteId;
+            try {
+                const c = await API.getComponenteDetalhes(componenteId);
+                
+                document.getElementById("drawer-componente-prazo-input").value = c.data_prevista ? c.data_prevista.split('T')[0] : '';
+                document.getElementById("drawer-componente-equip").innerText = c.equipamento_nome;
+		document.getElementById("drawer-componente-nome").innerText = c.nome;
+                document.getElementById("drawer-componente-op-rv").innerText =
+                    `OP: ${c.equipamento_op || 'N/A'}  •  RV: ${c.equipamento_rv || 'N/A'}`;
+                document.getElementById("drawer-componente-nome").innerText = c.nome;
+                
+                let statusBadge = document.getElementById("drawer-componente-status");
+                statusBadge.innerText = c.status.replace("_", " ").toUpperCase();
+                statusBadge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase " + 
+                    (c.status === "bloqueado" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600");
+                
+                let priorBadge = document.getElementById("drawer-componente-prioridade");
+                priorBadge.innerText = c.prioridade.toUpperCase();
+                priorBadge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase " +
+                    (c.prioridade === "critica" || c.prioridade === "urgente" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-600");
+
+                renderHistorico(c.historico);
+                renderDesenhos(c.ids_tecnicas);
+
+                const pendencias = await API.getPendenciasComponente(componenteId);
+                renderPendencias(pendencias);
+                ativarTab("pendencias");
+
+                const drawer = document.getElementById("drawer-componente");
+                drawer.classList.remove("hidden");
+                setTimeout(() => {
+                    drawer.classList.remove("translate-x-full");
+                }, 10);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderHistorico(historicoList) {
+            const container = document.getElementById("tab-content-historico");
+            if (historicoList.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhum evento registrado no histórico.</p>`;
+                return;
+            }
+            container.innerHTML = historicoList.map(h => `
+                <div class="flex gap-3 text-xs border-l-2 border-slate-100 pl-4 relative">
+                    <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+                    <div class="flex-1 space-y-0.5">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span class="font-bold text-slate-700">${h.usuario}</span>
+                            <span>${new Date(h.data_hora).toLocaleString('pt-BR')}</span>
+                        </div>
+                        <p class="font-bold text-slate-800">${h.evento}</p>
+                        <p class="text-slate-600">${h.descricao}</p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderPendencias(pendenciasList) {
+            const container = document.getElementById("tab-content-pendencias");
+            const abertas = pendenciasList.filter(p => p.status === "aberta");
+
+            if (abertas.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhuma pendência aberta.</p>`;
+                return;
+            }
+
+            container.innerHTML = abertas.map(p => `
+                <div class="p-3 rounded-xl border ${p.bloqueante ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'} space-y-1.5">
+                    <div class="flex justify-between items-start gap-2">
+                        <p class="font-bold text-xs text-slate-800">${p.titulo}</p>
+                        ${p.bloqueante ? '<span class="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase shrink-0">Bloqueante</span>' : ''}
+                    </div>
+                    <p class="text-[11px] text-slate-600">${p.descricao || 'Sem descrição.'}</p>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-[10px] text-slate-400">Aberta por ${p.aberta_por} em ${new Date(p.aberta_em).toLocaleDateString('pt-BR')}</span>
+                        <button onclick="cancelarPendencia('${p.id}')" class="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded text-[10px] font-bold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px]">check_circle</span> Resolver
+                        </button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        window.cancelarPendencia = async function(pendenciaId) {
+            if (!confirm("Confirma a resolução desta pendência?")) return;
+            try {
+                await API.encerrarPendencia(pendenciaId);
+                abrirDrawerComponente(activeComponentId);
+                carregarEquipamentos();
+            } catch (err) {
+                alert(err.message);
+            }
+        };
+
+        function renderDesenhos(idsList) {
+            const container = document.getElementById("tab-content-desenhos");
+            if (idsList.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhuma ID ou Desenho vinculado a este componente.</p>`;
+                return;
+            }
+            container.innerHTML = idsList.map(id => `
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+                    <div class="flex justify-between text-xs font-bold text-slate-700">
+                        <span>ID Técnica: ${id.numero}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
+                    </div>
+                    <div class="space-y-1">
+                        ${id.desenhos.map(d => `
+                            <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
+                                <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
+                                <span class="text-slate-500 max-w-[200px] truncate">${d.descricao || ''}</span>
+                                <span class="font-bold text-slate-700">Qtd: ${d.quantidade}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        document.getElementById("drawer-btn-fechar").addEventListener("click", () => {
+            const drawer = document.getElementById("drawer-componente");
+            drawer.classList.add("translate-x-full");
+            setTimeout(() => {
+                drawer.classList.add("hidden");
+            }, 300);
+        });
+
+        const tabs = {
+            pendencias: { btn: document.getElementById("tab-pendencias"), content: document.getElementById("tab-content-pendencias") },
+            historico: { btn: document.getElementById("tab-historico"), content: document.getElementById("tab-content-historico") },
+            desenhos: { btn: document.getElementById("tab-desenhos"), content: document.getElementById("tab-content-desenhos") }
+        };
+
+        function ativarTab(nomeAtivo) {
+            Object.entries(tabs).forEach(([nome, { btn, content }]) => {
+                if (nome === nomeAtivo) {
+                    btn.className = "border-b-2 border-blue-900 pb-2 text-xs font-bold text-blue-900";
+                    content.classList.remove("hidden");
+                } else {
+                    btn.className = "border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400";
+                    content.classList.add("hidden");
+                }
+            });
+        }
+
+        tabs.pendencias.btn.addEventListener("click", () => ativarTab("pendencias"));
+        tabs.historico.btn.addEventListener("click", () => ativarTab("historico"));
+        tabs.desenhos.btn.addEventListener("click", () => ativarTab("desenhos"));
+
+        document.getElementById("btn-avancar").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                await API.avancarEtapa(activeComponentId);
+                abrirDrawerComponente(activeComponentId);
+                carregarEquipamentos();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        document.getElementById("btn-retornar").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                await API.retornarEtapa(activeComponentId);
+                abrirDrawerComponente(activeComponentId);
+                carregarEquipamentos();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        const modal = document.getElementById("modal-pendencia");
+        
+        document.getElementById("btn-abrir-pendencia-modal").addEventListener("click", () => {
+            modal.classList.remove("hidden");
+        });
+
+        document.getElementById("modal-btn-cancelar").addEventListener("click", () => {
+            modal.classList.add("hidden");
+        });
+
+        document.getElementById("modal-btn-salvar").addEventListener("click", async () => {
+            const titulo = document.getElementById("pendencia-titulo").value.trim();
+            const desc = document.getElementById("pendencia-desc").value.trim();
+            const bloqueante = document.getElementById("pendencia-bloqueante").checked;
+
+            if (!titulo) {
+                alert("Por favor, preencha o título da pendência");
+                return;
+            }
+
+            try {
+                await API.criarPendencia({
+                    componente_id: activeComponentId,
+                    titulo: titulo,
+                    descricao: desc,
+                    bloqueante: bloqueante
+                });
+                modal.classList.add("hidden");
+                abrirDrawerComponente(activeComponentId);
+                carregarEquipamentos();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        // ==========================================
+        // CADASTRO DE EQUIPAMENTOS (com criação de cliente inline)
+        // ==========================================
+        let clientesCache = [];
+
+        async function carregarClientesCache() {
+            const res = await fetch("/api/clientes", {
+                headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+            });
+            clientesCache = await res.json();
+
+            const datalist = document.getElementById("lista-clientes");
+            datalist.innerHTML = clientesCache.map(c => `<option value="${c.nome}">`).join("");
+        }
+
+        function clienteEncontradoPorNome(nomeDigitado) {
+            const nomeNormalizado = nomeDigitado.trim().toLowerCase();
+            return clientesCache.find(c => c.nome.trim().toLowerCase() === nomeNormalizado);
+        }
+
+        document.getElementById("btn-novo-equipamento").addEventListener("click", async () => {
+            document.getElementById("form-equipamento").reset();
+            document.getElementById("form-eq-cliente-id").value = "";
+            document.getElementById("form-eq-cliente-novo-wrap").classList.add("hidden");
+            await carregarClientesCache();
+            document.getElementById("modal-equipamento").classList.remove("hidden");
+        });
+
+        // Ao digitar/selecionar o cliente, verifica se já existe; se não, pede a sigla para cadastrar na hora
+        document.getElementById("form-eq-cliente").addEventListener("input", (e) => {
+            const existente = clienteEncontradoPorNome(e.target.value);
+            const wrapNovo = document.getElementById("form-eq-cliente-novo-wrap");
+            const siglaInput = document.getElementById("form-eq-cliente-sigla");
+
+            if (existente) {
+                document.getElementById("form-eq-cliente-id").value = existente.id;
+                wrapNovo.classList.add("hidden");
+                siglaInput.required = false;
+            } else {
+                document.getElementById("form-eq-cliente-id").value = "";
+                if (e.target.value.trim().length > 0) {
+                    wrapNovo.classList.remove("hidden");
+                    siglaInput.required = true;
+                    if (!siglaInput.value) {
+                        siglaInput.value = e.target.value.trim().slice(0, 4).toUpperCase();
+                    }
+                } else {
+                    wrapNovo.classList.add("hidden");
+                    siglaInput.required = false;
+                }
+            }
+        });
+
+        document.getElementById("form-equipamento").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nomeCliente = document.getElementById("form-eq-cliente").value.trim();
+            let cliente_id = document.getElementById("form-eq-cliente-id").value;
+            const nome = document.getElementById("form-eq-nome").value.trim();
+            const op = document.getElementById("form-eq-op").value.trim();
+            const rv = document.getElementById("form-eq-rv").value.trim();
+            const data_entrega = document.getElementById("form-eq-entrega").value;
+
+            if (!nomeCliente) {
+                alert("Informe o cliente do equipamento");
+                return;
+            }
+
+            try {
+                // Cliente novo: cadastra antes de criar o equipamento
+                if (!cliente_id) {
+                    const sigla = document.getElementById("form-eq-cliente-sigla").value.trim().toUpperCase();
+                    if (!sigla) {
+                        alert("Informe uma sigla para o novo cliente");
+                        return;
+                    }
+                    const resCliente = await fetch("/api/clientes", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                        },
+                        body: JSON.stringify({ nome: nomeCliente, sigla })
+                    });
+                    const dataCliente = await resCliente.json();
+                    if (!resCliente.ok) throw new Error(dataCliente.detail || "Erro ao cadastrar novo cliente");
+                    cliente_id = dataCliente.id;
+                }
+
+                const response = await fetch("/api/equipamentos", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                    },
+                    body: JSON.stringify({ cliente_id, nome, op, rv, data_entrega })
+                });
+                if (!response.ok) throw new Error("Erro ao salvar equipamento");
+                
+                document.getElementById("modal-equipamento").classList.add("hidden");
+                carregarEquipamentos();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        const etapasCompContainer = document.getElementById("componente-etapas-list");
+        let modelosFluxoGlobal = [];
+
+        window.abrirModalComponente = async function(equipamentoId) {
+            document.getElementById("form-comp-equip-id").value = equipamentoId;
+            document.getElementById("form-comp-id").value = "";
+            document.getElementById("form-componente").reset();
+            document.getElementById("modal-componente-title").innerText = "Cadastrar Componente";
+            
+            const res = await fetch("/api/modelos-fluxo", {
+                headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+            });
+            modelosFluxoGlobal = await res.json();
+            
+            const selectMod = document.getElementById("form-comp-template-fluxo");
+            selectMod.innerHTML = `
+                <option value="">-- Carregar Template --</option>
+                ${modelosFluxoGlobal.map(m => `<option value="${m.id}">${m.nome}</option>`).join("")}
+            `;
+            
+            renderComponenteEtapaInputs(["Engenharia", "Listagem", "Programação CNC", "Corte", "Caldeiraria", "Pintura", "Montagem", "Qualidade", "Expedição"]);
+            document.getElementById("modal-componente").classList.remove("hidden");
+        };
+
+        function renderComponenteEtapaInputs(etapasList) {
+            etapasCompContainer.innerHTML = etapasList.map((et, idx) => `
+                <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200 text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${idx + 1}</span>
+                    <input type="text" value="${et}" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                    <button type="button" class="text-slate-400 hover:text-red-500" onclick="this.closest('div').remove(); reordenarEtapasComp();">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                </div>
+            `).join("");
+        }
+
+        window.reordenarEtapasComp = function() {
+            Array.from(etapasCompContainer.children).forEach((child, idx) => {
+                child.querySelector("span").innerText = idx + 1;
+            });
+        };
+
+        document.getElementById("form-comp-template-fluxo").addEventListener("change", (e) => {
+            const val = e.target.value;
+            if (!val) return;
+            
+            const selecionado = modelosFluxoGlobal.find(m => m.id === val);
+            if (selecionado && selecionado.etapas) {
+                renderComponenteEtapaInputs(selecionado.etapas);
+            }
+        });
+
+        document.getElementById("btn-comp-add-etapa").addEventListener("click", () => {
+            const idx = etapasCompContainer.children.length + 1;
+            const inputHtml = `
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200 text-xs">
+                <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${idx}</span>
+                <input type="text" placeholder="Nome da etapa" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                <button type="button" class="text-slate-400 hover:text-red-500" onclick="this.closest('div').remove(); reordenarEtapasComp();">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+            </div>
+            `;
+            etapasCompContainer.insertAdjacentHTML("beforeend", inputHtml);
+        });
+
+        document.getElementById("form-componente").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("form-comp-id").value;
+            const equipamento_id = document.getElementById("form-comp-equip-id").value;
+            const nome = document.getElementById("form-comp-nome").value.trim();
+            const prioridade = document.getElementById("form-comp-prioridade").value;
+            const data_prevista = document.getElementById("form-comp-entrega").value;
+            
+            const etapas = Array.from(etapasCompContainer.querySelectorAll("input")).map(input => input.value.trim());
+
+            if (etapas.length === 0) {
+                alert("O componente precisa possuir pelo menos uma etapa de fluxo");
+                return;
+            }
+
+            try {
+                if (id) {
+                    const response = await fetch(`/api/componentes/${id}/fluxo`, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                        },
+                        body: JSON.stringify(etapas)
+                    });
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.detail || "Erro ao salvar alterações no fluxo");
+                    }
+                } else {
+                    const response = await fetch("/api/componentes", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                        },
+                        body: JSON.stringify({ equipamento_id, nome, prioridade, data_prevista, etapas })
+                    });
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.detail || "Erro ao salvar componente");
+                    }
+                }
+
+                document.getElementById("modal-componente").classList.add("hidden");
+                carregarEquipamentos();
+                if (id) {
+                    abrirDrawerComponente(id);
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        document.getElementById("btn-customizar-fluxo-componente").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                const c = await API.getComponenteDetalhes(activeComponentId);
+                
+                document.getElementById("form-comp-equip-id").value = c.equipamento_id;
+                document.getElementById("form-comp-id").value = c.id;
+                document.getElementById("form-comp-nome").value = c.nome;
+                document.getElementById("form-comp-nome").disabled = true;
+                document.getElementById("form-comp-prioridade").value = c.prioridade;
+                document.getElementById("form-comp-entrega").value = c.data_prevista || "";
+                document.getElementById("modal-componente-title").innerText = "Editar Fluxo de Produção";
+                
+                const res = await fetch("/api/modelos-fluxo", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                modelosFluxoGlobal = await res.json();
+                
+                const selectMod = document.getElementById("form-comp-template-fluxo");
+                selectMod.innerHTML = `
+                    <option value="">-- Carregar Template --</option>
+                    ${modelosFluxoGlobal.map(m => `<option value="${m.id}">${m.nome}</option>`).join("")}
+                `;
+
+                const nomesEtapas = c.etapas.map(et => et.nome);
+                renderComponenteEtapaInputs(nomesEtapas);
+
+                document.getElementById("drawer-componente").classList.add("hidden");
+                document.getElementById("modal-componente").classList.remove("hidden");
+
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        carregarEquipamentos();
+    </script>
+</body>
+</html>

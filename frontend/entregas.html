@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entregas - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            
+            <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-700 uppercase">Calendário de Entregas</h2>
+                    <p class="text-xs text-slate-400 font-medium">Lista cronológica dos equipamentos pendentes de expedição</p>
+                </div>
+                <button id="btn-exportar-excel" class="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">download_for_offline</span> Exportar Relatório Excel
+                </button>
+            </div>
+
+            <!-- Lista Cronológica -->
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Previsão de Entrega</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Equipamento</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Cliente</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">RV</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">OP</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">Status</th>
+                            <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-center">Criticidade</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-entregas" class="divide-y divide-slate-100 text-xs text-slate-800">
+                        <!-- Inserido dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+        </div>
+    </main>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("entregas");
+        renderHeader("Entregas de Produção");
+
+        async function carregarEntregas() {
+            try {
+                const equipamentos = await API.getEquipamentos();
+                const container = document.getElementById("tabela-entregas");
+                
+                // Filtrar apenas em produção e ordenar por data de entrega mais antiga
+                const emProducao = equipamentos
+    .filter(eq => eq.data_entrega && (eq.status === "em_producao" || eq.status === "carregado"))
+    .sort((a, b) => new Date(a.data_entrega) - new Date(b.data_entrega));
+
+                if (emProducao.length === 0) {
+                    container.innerHTML = `<tr><td colspan="6" class="px-4 py-4 italic text-slate-400 text-center">Nenhum equipamento agendado para entrega.</td></tr>`;
+                    return;
+                }
+
+                container.innerHTML = emProducao.map(eq => {
+                    let critBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-600 border border-green-200">NORMAL</span>`;
+if (eq.criticidade === "carregado") {
+    critBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200">CARREGADO</span>`;
+} else if (eq.criticidade === "critico") {
+    critBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">CRÍTICO</span>`;
+} else if (eq.criticidade === "alerta") {
+    critBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">ALERTA</span>`;
+}
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'">
+                        <td class="px-4 py-3 font-bold font-mono text-slate-800">${new Date(eq.data_entrega).toLocaleDateString('pt-BR')}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-700">${eq.nome}</td>
+                        <td class="px-4 py-3 text-slate-600">${eq.cliente_nome}</td>
+                        <td class="px-4 py-3 text-center font-mono font-bold">${eq.rv || 'N/A'}</td>
+                        <td class="px-4 py-3 text-center font-mono font-bold">${eq.op || 'N/A'}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-900 border border-blue-100 uppercase">
+                                ${eq.status.replace("_", " ")}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">${critBadge}</td>
+                    </tr>
+                    `;
+                }).join("");
+
+            } catch (err) {
+                console.error("Erro ao carregar entregas:", err);
+            }
+        }
+
+        // Evento de Exportação para Excel
+        document.getElementById("btn-exportar-excel").addEventListener("click", async () => {
+            try {
+                const blob = await API.exportarExcel();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "CCP_Acompanhamento_Producao.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Erro ao exportar planilha Excel: " + err.message);
+            }
+        });
+
+        carregarEntregas();
+    </script>
+</body>
+</html>

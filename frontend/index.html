@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCP Industrial - Centro de Controle da Produção</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <!-- Sidebar e Header dinâmicos -->
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <!-- Conteúdo Principal -->
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            
+             <!-- 1. Carrossel "Prioridades do Dia" (RF-01) -->
+<div id="prioridade-dia-carousel" class="hidden relative">
+    <div id="prioridade-track" class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1" style="scrollbar-width: none;"></div>
+    <div id="prioridade-dots" class="flex justify-center gap-1.5 mt-2"></div>
+</div>
+
+            <!-- 2. KPIs Gerais (RF-02) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl border-l-4 border-l-amber-500 border border-slate-200 shadow-sm flex flex-col justify-between h-28 cursor-pointer hover:border-slate-300 transition-colors" onclick="window.location.href='equipamentos.html?filtro=atraso'">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-amber-600 uppercase">Equipamentos em ATRASO</span>
+                        <span class="material-symbols-outlined text-amber-500 text-[24px]">schedule</span>
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <div id="kpi-atrasos" class="text-3xl font-bold text-slate-800 leading-none">0</div>
+                        <div class="text-[11px] font-semibold text-amber-600 mb-1 flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-[14px]">arrow_upward</span> Baseado no prazo
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl border-l-4 border-l-red-500 border border-slate-200 shadow-sm flex flex-col justify-between h-28 cursor-pointer hover:border-slate-300 transition-colors" onclick="window.location.href='equipamentos.html?filtro=bloqueio'">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-red-600 uppercase">Bloqueios Ativos</span>
+                        <span class="material-symbols-outlined text-red-500 text-[24px]">block</span>
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <div id="kpi-bloqueios" class="text-3xl font-bold text-slate-800 leading-none">0</div>
+                        <div class="text-[11px] font-semibold text-red-600 mb-1">Paralisando componentes</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border-l-4 border-l-blue-600 border border-slate-200 shadow-sm flex flex-col justify-between h-28 cursor-pointer hover:border-slate-300 transition-colors" onclick="window.location.href='equipamentos.html?filtro=entrega-semana'">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-bold text-blue-600 uppercase">Entregas da Semana</span>
+                        <span class="material-symbols-outlined text-blue-600 text-[24px]">local_shipping</span>
+                    </div>
+                    <div class="flex items-end gap-3">
+                        <div id="kpi-entregas" class="text-3xl font-bold text-slate-800 leading-none">0</div>
+                        <div class="text-[11px] font-semibold text-blue-600 mb-1">Próximos 7 dias</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Produção por Etapa (RF-03) -->
+            <section class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Produção por Etapa</h3>
+                <div id="etapas-fluxo-container" class="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
+                    <!-- Inserido dinamicamente via JS -->
+                </div>
+            </section>
+
+            <!-- 4. Grid Principal (Feed de Equipamentos + Entregas da Semana) -->
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Feed de Equipamentos (RF-04, RF-05) -->
+                <section class="col-span-12 lg:col-span-8 flex flex-col gap-4">
+                    <div class="flex justify-between items-end pb-2 border-b border-slate-200">
+                        <h2 class="text-sm font-bold text-slate-700 uppercase">Feed de Equipamentos</h2>
+                        <span class="text-[11px] text-slate-500 font-medium">Ordenado por criticidade</span>
+                    </div>
+                    
+                    <div id="feed-equipamentos" class="space-y-4">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </section>
+
+                <!-- Lateral Direita: Próximas Entregas (RF-06) -->
+                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                    <section class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                        <h2 class="text-xs font-bold text-slate-700 flex items-center gap-2 uppercase">
+                            <span class="material-symbols-outlined text-[18px] text-slate-600">local_shipping</span>
+                            Próximas Entregas
+                        </h2>
+                        
+                        <div id="lista-proximas-entregas" class="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+                            <!-- Inserido dinamicamente via JS -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        // Inicializar componentes globais
+        renderSidebar("dashboard");
+        renderHeader("Centro de Controle da Produção");
+
+        async function carregarDashboard() {
+            try {
+                // 1. Carregar KPIs
+                const resumo = await API.getDashboardResumo();
+                document.getElementById("kpi-atrasos").innerText = String(resumo.equipamentos_atraso).padStart(2, '0');
+                document.getElementById("kpi-bloqueios").innerText = resumo.bloqueios_ativos;
+                document.getElementById("kpi-entregas").innerText = resumo.entregas_semana;
+
+                // 2. Carregar Prioridades do Dia (carrossel)
+const prioridades = await API.getPrioridadeDia(); // agora retorna uma LISTA
+const carousel = document.getElementById("prioridade-dia-carousel");
+const track = document.getElementById("prioridade-track");
+const dotsBox = document.getElementById("prioridade-dots");
+
+if (prioridades && prioridades.length > 0) {
+    track.innerHTML = "";
+    dotsBox.innerHTML = "";
+
+    prioridades.forEach((p, i) => {
+        const bloqueioHtml = p.bloqueado
+            ? `<span class="material-symbols-outlined text-[14px]">block</span> Bloqueio Crítico: ${p.bloqueio}`
+            : `<span class="material-symbols-outlined text-[14px]">check_circle</span> Equipamento sem bloqueios ativos`;
+        const bloqueioClass = p.bloqueado
+            ? "text-xs text-red-800 mt-1 flex items-center gap-1 font-semibold"
+            : "text-xs text-green-800 mt-1 flex items-center gap-1 font-medium";
+
+        const slide = document.createElement("div");
+        slide.className = "snap-start shrink-0 w-full bg-red-50 border-2 border-red-500 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
+        slide.innerHTML = `
+            <div class="flex items-center gap-4">
+                <div class="bg-red-500 text-white p-3 rounded-lg flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[28px]">warning</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[10px] tracking-wider text-red-500 uppercase bg-red-100 px-2 py-0.5 rounded font-bold">Prioridade ${i + 1}</span>
+                        <span class="font-mono text-xs text-red-800 font-semibold">Prazo: ${p.dias_prazo} dias</span>
+                    </div>
+                    <h2 class="font-semibold text-lg text-red-950 leading-tight">${p.nome} (RV: ${p.rv || "N/A"}) (OP: ${p.op})</h2>
+                    <p class="${bloqueioClass}">${bloqueioHtml}</p>
+                </div>
+            </div>
+            <button class="flex-shrink-0 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 transition-colors">
+                Abrir Equipamento <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </button>
+        `;
+        slide.querySelector("button").onclick = () => {
+            window.location.href = `equipamento-detalhe.html?id=${p.id}`;
+        };
+        track.appendChild(slide);
+
+        const dot = document.createElement("button");
+        dot.className = "w-2 h-2 rounded-full bg-red-300 transition-colors";
+        dot.onclick = () => track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+        dotsBox.appendChild(dot);
+    });
+
+    // Marca o dot ativo conforme o scroll do carrossel
+    const dots = Array.from(dotsBox.children);
+    track.addEventListener("scroll", () => {
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle("bg-red-600", i === idx) || d.classList.toggle("bg-red-300", i !== idx));
+    });
+    dots[0]?.classList.add("bg-red-600");
+
+    // Auto-avanço a cada 6s, pausa ao passar o mouse
+    let autoplay = setInterval(() => {
+        const next = (Math.round(track.scrollLeft / track.clientWidth) + 1) % prioridades.length;
+        track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
+    }, 6000);
+    carousel.addEventListener("mouseenter", () => clearInterval(autoplay));
+
+    carousel.classList.remove("hidden");
+} else {
+    carousel.classList.add("hidden");
+}
+
+                // 3. Carregar Produção por Etapa
+                const etapas = await API.getProducaoPorEtapa();
+                const etapasContainer = document.getElementById("etapas-fluxo-container");
+                etapasContainer.innerHTML = etapas.map(et => `
+                    <div class="flex-shrink-0 w-48 p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-600 transition-all text-left cursor-pointer" onclick="window.location.href='componentes.html?etapa=${encodeURIComponent(et.etapa)}'">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase">${et.etapa}</span>
+                            <span class="text-xs font-bold text-slate-800">${String(et.total).padStart(2, '0')} <span class="text-[9px] font-normal text-slate-400">tot</span></span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-2">
+                            <div class="bg-blue-900 h-full rounded-full" style="width: 100%"></div>
+                        </div>
+                        <p class="text-[10px] ${et.criticos > 0 ? 'text-red-600 font-bold' : 'text-slate-500 font-medium'} flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full ${et.criticos > 0 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}"></span>
+                            ${et.criticos > 0 ? `${et.criticos} Críticos` : 'No prazo'}
+                        </p>
+                    </div>
+                `).join("");
+
+                // 4. Carregar Feed de Equipamentos
+                const equipamentos = await API.getEquipamentos();
+                const feed = document.getElementById("feed-equipamentos");
+                
+                // Ordenar por criticidade (critico -> alerta -> normal)
+                const criticidadeOrdem = { "critico": 1, "alerta": 2, "normal": 3 };
+                equipamentos.sort((a, b) => criticidadeOrdem[a.criticidade] - criticidadeOrdem[b.criticidade]);
+
+                if (equipamentos.length === 0) {
+                    feed.innerHTML = `<p class="text-sm text-slate-500 italic p-6 bg-white rounded-xl border border-slate-200">Nenhum equipamento em andamento.</p>`;
+                } else {
+                    feed.innerHTML = equipamentos.map(eq => {
+                        let bordaColor = "bg-green-500";
+                        let textoColor = "text-green-600 bg-green-50";
+                        if (eq.criticidade === "critico") {
+                            bordaColor = "bg-red-500";
+                            textoColor = "text-red-600 bg-red-50";
+                        } else if (eq.criticidade === "alerta") {
+                            bordaColor = "bg-amber-500";
+                            textoColor = "text-amber-600 bg-amber-50";
+                        }
+                        
+                        return `
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-4 hover:border-slate-400 transition-colors relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1.5 h-full ${bordaColor}"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div class="flex flex-col gap-0.5">
+                                    <h3 class="text-base font-bold text-slate-800 leading-tight">RV: ${eq.rv || 'N/A'} - OP: ${eq.op || 'N/A'} - ${eq.nome}</h3>
+                                    <p class="text-xs text-slate-500">Cliente: <span class="font-semibold text-slate-700">${eq.cliente_nome}</span> | <span class="font-semibold text-slate-600">Entrega: ${eq.data_entrega ? new Date(eq.data_entrega).toLocaleDateString('pt-BR') : 'N/A'}</span></p>
+                                </div>
+                                <button class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold rounded-lg transition-colors" onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'">Abrir Equipamento</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                                <div class="space-y-3">
+                                    <div class="flex flex-col gap-1">
+                                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Progresso Físico Geral</span>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                <div class="bg-blue-900 h-full rounded-full" style="width: ${eq.percentual_geral}%"></div>
+                                            </div>
+                                            <span class="text-xs font-bold text-blue-900">${eq.percentual_geral}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-1 border-l border-slate-100 pl-4">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Situação</span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold w-fit uppercase ${textoColor}">
+                                        ${eq.criticidade.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join("");
+                }
+
+                // 5. Próximas Entregas (Lateral Direita)
+                const entregasContainer = document.getElementById("lista-proximas-entregas");
+                const entregasFiltradas = equipamentos
+                    .filter(eq => eq.data_entrega)
+                    .sort((a, b) => new Date(a.data_entrega) - new Date(b.data_entrega))
+                    .slice(0, 5);
+
+                if (entregasFiltradas.length === 0) {
+                    entregasContainer.innerHTML = `<p class="text-xs text-slate-400 italic p-3 text-center">Nenhuma entrega agendada.</p>`;
+                } else {
+                    entregasContainer.innerHTML = entregasFiltradas.map(eq => {
+                        let statusBadge = `<span class="text-[9px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-bold uppercase border border-green-200">No Prazo</span>`;
+                        if (eq.criticidade === "critico") {
+                            statusBadge = `<span class="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase border border-red-200">CRÍTICO</span>`;
+                        } else if (eq.criticidade === "alerta") {
+                            statusBadge = `<span class="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-bold uppercase border border-amber-200">Atrasado</span>`;
+                        }
+                        
+                        return `
+                        <div class="p-3 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 cursor-pointer" onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">${new Date(eq.data_entrega).toLocaleDateString('pt-BR')}</span>
+                                <p class="text-xs font-bold text-slate-800 truncate max-w-[180px]">${eq.nome} - OP: ${eq.op || 'N/A'}</p>
+                                <p class="text-[10px] text-slate-500">${eq.cliente_nome}</p>
+                            </div>
+                            <div class="text-right flex flex-col items-end gap-1">
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        `;
+                    }).join("");
+                }
+
+            } catch (err) {
+                console.error("Erro ao inicializar dashboard:", err);
+            }
+        }
+
+        carregarDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Componentes - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+
+            <!-- Barra de Filtros -->
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <label for="filtro-etapa" class="text-[10px] font-bold text-slate-500 uppercase">Etapa</label>
+                        <select id="filtro-etapa" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 min-w-[180px]">
+                            <option value="">Todas as etapas</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="filtro-prioridade" class="text-[10px] font-bold text-slate-500 uppercase">Prioridade</label>
+                        <select id="filtro-prioridade" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
+                            <option value="">Todas</option>
+                            <option value="normal">Normal</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                            <option value="critica">Crítica</option>
+                        </select>
+                    </div>
+                    <button id="btn-limpar-filtros" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">filter_alt_off</span> Limpar
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span id="contador-componentes">0 componentes</span>
+                </div>
+            </div>
+
+            <!-- Tabela de Componentes (achatada, todos os equipamentos) -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Componente</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Equipamento</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Cliente</th>
+			    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-center">OP</th>
+			    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-center">RV</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Etapa Atual</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-center">Status</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-center">Progresso</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-center">Prioridade</th>
+                            <th class="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-componentes" class="divide-y divide-slate-100">
+                        <!-- Inserido dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Gaveta Lateral de Detalhes do Componente (idêntica à de equipamentos.html) -->
+    <div id="drawer-componente" class="fixed inset-y-0 right-0 w-[550px] bg-white border-l border-slate-200 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto p-6 hidden flex flex-col gap-6">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+            <div>
+                <span id="drawer-componente-equip" class="text-[10px] font-bold text-slate-400 uppercase">Equipamento</span>
+                <h3 id="drawer-componente-nome" class="text-lg font-bold text-slate-800">Nome do Componente</h3>
+            </div>
+            <button id="drawer-btn-fechar" class="p-1 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Status da Etapa</span>
+                <span id="drawer-componente-status" class="px-2 py-0.5 rounded text-xs font-bold uppercase">EM ANDAMENTO</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prioridade</span>
+                <span id="drawer-componente-prioridade" class="px-2 py-0.5 rounded text-xs font-bold uppercase">NORMAL</span>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-3">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide">Ações do PCP</h4>
+            <div class="flex gap-2">
+                <button id="btn-retornar" class="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">undo</span> Retornar Etapa
+                </button>
+                <button id="btn-avancar" class="flex-1 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">redo</span> Avançar Etapa
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-abrir-pendencia-modal" class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">block</span> Sinalizar Bloqueio
+                </button>
+                <button id="btn-customizar-fluxo-componente" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold rounded-lg text-xs flex items-center justify-center gap-1 transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">page_info</span> Customizar Fluxo
+                </button>
+            </div>
+        </div>
+
+        <div class="border-b border-slate-100 flex gap-4">
+            <button id="tab-pendencias" class="border-b-2 border-blue-900 pb-2 text-xs font-bold text-blue-900">Pendências</button>
+            <button id="tab-historico" class="border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400">Histórico de Alterações</button>
+            <button id="tab-desenhos" class="border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400">Desenhos & IDs</button>
+        </div>
+
+        <div id="drawer-tab-content" class="flex-1">
+            <div id="tab-content-pendencias" class="space-y-3"></div>
+            <div id="tab-content-historico" class="hidden space-y-4"></div>
+            <div id="tab-content-desenhos" class="hidden space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Abertura de Pendência -->
+    <div id="modal-pendencia" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-slate-800 flex items-center gap-1.5"><span class="material-symbols-outlined text-red-500">block</span> Abrir Bloqueio/Pendência</h3>
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label for="pendencia-titulo" class="text-[10px] font-bold text-slate-500 uppercase">Título da Ocorrência</label>
+                    <input id="pendencia-titulo" type="text" placeholder="Falta de matéria-prima, etc." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="pendencia-desc" class="text-[10px] font-bold text-slate-500 uppercase">Descrição Detalhada</label>
+                    <textarea id="pendencia-desc" rows="3" placeholder="Especifique o problema..." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="pendencia-bloqueante" type="checkbox" checked class="rounded text-red-500 focus:ring-red-500">
+                    <label for="pendencia-bloqueante" class="text-xs font-bold text-slate-700">Bloquear andamento do componente?</label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="modal-btn-cancelar" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors">Cancelar</button>
+                <button id="modal-btn-salvar" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-xs transition-colors">Confirmar Bloqueio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Customizar Fluxo do Componente -->
+    <div id="modal-componente" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-lg shadow-2xl space-y-4">
+            <h3 id="modal-componente-title" class="text-base font-bold text-slate-800">Editar Fluxo de Produção</h3>
+            <form id="form-componente" class="space-y-3">
+                <input type="hidden" id="form-comp-equip-id">
+                <input type="hidden" id="form-comp-id">
+                <div class="space-y-1">
+                    <label for="form-comp-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome do Componente</label>
+                    <input id="form-comp-nome" type="text" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label for="form-comp-prioridade" class="text-[10px] font-bold text-slate-500 uppercase">Prioridade</label>
+                        <select id="form-comp-prioridade" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                            <option value="normal">Normal</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                            <option value="critica">Crítica</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="form-comp-entrega" class="text-[10px] font-bold text-slate-500 uppercase">Previsão</label>
+                        <input id="form-comp-entrega" type="date" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                    </div>
+                </div>
+
+                <div class="border border-slate-100 p-3 rounded-xl bg-slate-50 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Etapas de Fabricação</span>
+                        <select id="form-comp-template-fluxo" class="border-slate-200 rounded text-[10px] py-0.5 px-2">
+                            <option value="">-- Carregar Template --</option>
+                        </select>
+                    </div>
+
+                    <div id="componente-etapas-list" class="space-y-1 max-h-36 overflow-y-auto">
+                        <!-- Inputs ordenáveis de etapa -->
+                    </div>
+                    <button type="button" id="btn-comp-add-etapa" class="text-[10px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[14px]">add</span> Adicionar Etapa Personalizada
+                    </button>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-componente').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar Componente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("componentes");
+        renderHeader("Componentes");
+
+        let activeComponentId = null;
+        let todosComponentes = [];
+        let modelosFluxoGlobal = [];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const etapaInicial = urlParams.get("etapa") || "";
+
+        // ==========================================
+        // 1. CARREGAMENTO E FILTROS
+        // ==========================================
+        async function carregarComponentes() {
+            try {
+                todosComponentes = await API.getComponentes();
+                popularFiltroEtapas(todosComponentes);
+
+                if (etapaInicial) {
+                    document.getElementById("filtro-etapa").value = etapaInicial;
+                }
+
+                renderizarLista();
+            } catch (err) {
+                console.error("Erro ao listar componentes:", err);
+            }
+        }
+
+        function popularFiltroEtapas(componentes) {
+            const selectEtapa = document.getElementById("filtro-etapa");
+            const etapasUnicas = [...new Set(
+                componentes.map(c => c.etapa_atual_nome).filter(nome => nome && nome !== "N/A")
+            )].sort();
+
+            const valorAtual = selectEtapa.value;
+            selectEtapa.innerHTML = `<option value="">Todas as etapas</option>` +
+                etapasUnicas.map(et => `<option value="${et}">${et}</option>`).join("");
+            selectEtapa.value = valorAtual;
+        }
+
+        function renderizarLista() {
+            const filtroEtapa = document.getElementById("filtro-etapa").value;
+            const filtroPrioridade = document.getElementById("filtro-prioridade").value;
+
+            const filtrados = todosComponentes.filter(c => {
+                if (filtroEtapa && c.etapa_atual_nome !== filtroEtapa) return false;
+                if (filtroPrioridade && c.prioridade !== filtroPrioridade) return false;
+                return true;
+            });
+
+            document.getElementById("contador-componentes").innerText =
+                `${filtrados.length} componente${filtrados.length !== 1 ? 's' : ''}`;
+
+            const tbody = document.getElementById("lista-componentes");
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-xs italic text-slate-500 text-center">Nenhum componente encontrado para os filtros selecionados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map(c => {
+                let statusColor = "bg-green-50 text-green-600 border-green-200";
+                if (c.status === "bloqueado") {
+                    statusColor = "bg-red-50 text-red-600 border-red-200 animate-pulse";
+                } else if (c.status === "nao_iniciado") {
+                    statusColor = "bg-slate-50 text-slate-600 border-slate-200";
+                } else if (c.status === "aguardando") {
+                    statusColor = "bg-amber-50 text-amber-600 border-amber-200";
+                }
+
+                let priorityIcon = "expand";
+                let priorityColor = "text-slate-400";
+                if (c.prioridade === "critica" || c.prioridade === "urgente") {
+                    priorityIcon = "priority_high";
+                    priorityColor = "text-red-500 font-bold";
+                } else if (c.prioridade === "alta") {
+                    priorityIcon = "keyboard_double_arrow_up";
+                    priorityColor = "text-amber-500";
+                }
+
+                return `
+                <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="abrirDrawerComponente('${c.id}')">
+                    <td class="px-4 py-3 text-xs font-bold text-slate-800">${c.nome}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${c.equipamento_nome || 'N/A'}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${c.cliente_nome || 'N/A'}</td>
+		    <td class="px-4 py-3 text-xs text-slate-600 text-center font-mono">${c.equipamento_op || '-'}</td>
+		    <td class="px-4 py-3 text-xs text-slate-600 text-center font-mono">${c.equipamento_rv || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${c.etapa_atual_nome || 'N/A'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor}">
+                            ${c.status.replace("_", " ").toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <div class="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-blue-900 h-full" style="width: ${c.percentual}%"></div>
+                            </div>
+                            <span class="text-[10px] font-bold text-blue-900">${c.percentual}%</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="material-symbols-outlined text-sm ${priorityColor}">${priorityIcon}</span>
+                    </td>
+                    <td class="px-4 py-3 text-[10px] text-slate-500 italic truncate max-w-[200px]">${c.observacoes || 'Nenhuma'}</td>
+                </tr>
+                `;
+            }).join("");
+        }
+
+        document.getElementById("filtro-etapa").addEventListener("change", renderizarLista);
+        document.getElementById("filtro-prioridade").addEventListener("change", renderizarLista);
+        document.getElementById("btn-limpar-filtros").addEventListener("click", () => {
+            document.getElementById("filtro-etapa").value = "";
+            document.getElementById("filtro-prioridade").value = "";
+            renderizarLista();
+        });
+
+        // ==========================================
+        // 2. GAVETA LATERAL (idêntica à de equipamentos.html)
+        // ==========================================
+        window.abrirDrawerComponente = async function(componenteId) {
+            activeComponentId = componenteId;
+            try {
+                const c = await API.getComponenteDetalhes(componenteId);
+
+                document.getElementById("drawer-componente-equip").innerText = c.equipamento_nome;
+                document.getElementById("drawer-componente-nome").innerText = c.nome;
+
+                let statusBadge = document.getElementById("drawer-componente-status");
+                statusBadge.innerText = c.status.replace("_", " ").toUpperCase();
+                statusBadge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase " +
+                    (c.status === "bloqueado" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600");
+
+                let priorBadge = document.getElementById("drawer-componente-prioridade");
+                priorBadge.innerText = c.prioridade.toUpperCase();
+                priorBadge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase " +
+                    (c.prioridade === "critica" || c.prioridade === "urgente" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-600");
+
+                renderHistorico(c.historico);
+                renderDesenhos(c.ids_tecnicas);
+
+                const pendencias = await API.getPendenciasComponente(componenteId);
+                renderPendencias(pendencias);
+                ativarTab("pendencias");
+
+                const drawer = document.getElementById("drawer-componente");
+                drawer.classList.remove("hidden");
+                setTimeout(() => {
+                    drawer.classList.remove("translate-x-full");
+                }, 10);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderHistorico(historicoList) {
+            const container = document.getElementById("tab-content-historico");
+            if (historicoList.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhum evento registrado no histórico.</p>`;
+                return;
+            }
+            container.innerHTML = historicoList.map(h => `
+                <div class="flex gap-3 text-xs border-l-2 border-slate-100 pl-4 relative">
+                    <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+                    <div class="flex-1 space-y-0.5">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span class="font-bold text-slate-700">${h.usuario}</span>
+                            <span>${new Date(h.data_hora).toLocaleString('pt-BR')}</span>
+                        </div>
+                        <p class="font-bold text-slate-800">${h.evento}</p>
+                        <p class="text-slate-600">${h.descricao}</p>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderDesenhos(idsList) {
+            const container = document.getElementById("tab-content-desenhos");
+            if (idsList.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhuma ID ou Desenho vinculado a este componente.</p>`;
+                return;
+            }
+            container.innerHTML = idsList.map(id => `
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+                    <div class="flex justify-between text-xs font-bold text-slate-700">
+                        <span>ID Técnica: ${id.numero}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
+                    </div>
+                    <div class="space-y-1">
+                        ${id.desenhos.map(d => `
+                            <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
+                                <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
+                                <span class="text-slate-500 max-w-[200px] truncate">${d.descricao || ''}</span>
+                                <span class="font-bold text-slate-700">Qtd: ${d.quantidade}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderPendencias(pendenciasList) {
+            const container = document.getElementById("tab-content-pendencias");
+            const abertas = pendenciasList.filter(p => p.status === "aberta");
+
+            if (abertas.length === 0) {
+                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhuma pendência aberta.</p>`;
+                return;
+            }
+
+            container.innerHTML = abertas.map(p => `
+                <div class="p-3 rounded-xl border ${p.bloqueante ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'} space-y-1.5">
+                    <div class="flex justify-between items-start gap-2">
+                        <p class="font-bold text-xs text-slate-800">${p.titulo}</p>
+                        ${p.bloqueante ? '<span class="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase shrink-0">Bloqueante</span>' : ''}
+                    </div>
+                    <p class="text-[11px] text-slate-600">${p.descricao || 'Sem descrição.'}</p>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-[10px] text-slate-400">Aberta por ${p.aberta_por} em ${new Date(p.aberta_em).toLocaleDateString('pt-BR')}</span>
+                        <button onclick="cancelarPendencia('${p.id}')" class="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded text-[10px] font-bold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px]">check_circle</span> Resolver
+                        </button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        window.cancelarPendencia = async function(pendenciaId) {
+            if (!confirm("Confirma a resolução desta pendência?")) return;
+            try {
+                await API.encerrarPendencia(pendenciaId);
+                abrirDrawerComponente(activeComponentId);
+                carregarComponentes();
+            } catch (err) {
+                alert(err.message);
+            }
+        };
+
+        document.getElementById("drawer-btn-fechar").addEventListener("click", () => {
+            const drawer = document.getElementById("drawer-componente");
+            drawer.classList.add("translate-x-full");
+            setTimeout(() => {
+                drawer.classList.add("hidden");
+            }, 300);
+        });
+
+        // Controles de Abas na Gaveta
+        const tabs = {
+            pendencias: { btn: document.getElementById("tab-pendencias"), content: document.getElementById("tab-content-pendencias") },
+            historico: { btn: document.getElementById("tab-historico"), content: document.getElementById("tab-content-historico") },
+            desenhos: { btn: document.getElementById("tab-desenhos"), content: document.getElementById("tab-content-desenhos") }
+        };
+
+        function ativarTab(nomeAtivo) {
+            Object.entries(tabs).forEach(([nome, { btn, content }]) => {
+                if (nome === nomeAtivo) {
+                    btn.className = "border-b-2 border-blue-900 pb-2 text-xs font-bold text-blue-900";
+                    content.classList.remove("hidden");
+                } else {
+                    btn.className = "border-b-2 border-transparent pb-2 text-xs font-bold text-slate-400";
+                    content.classList.add("hidden");
+                }
+            });
+        }
+
+        tabs.pendencias.btn.addEventListener("click", () => ativarTab("pendencias"));
+        tabs.historico.btn.addEventListener("click", () => ativarTab("historico"));
+        tabs.desenhos.btn.addEventListener("click", () => ativarTab("desenhos"));
+
+        // ==========================================
+        // 3. AÇÕES AVANÇAR / RETORNAR
+        // ==========================================
+        document.getElementById("btn-avancar").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                await API.avancarEtapa(activeComponentId);
+                abrirDrawerComponente(activeComponentId);
+                carregarComponentes();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        document.getElementById("btn-retornar").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                await API.retornarEtapa(activeComponentId);
+                abrirDrawerComponente(activeComponentId);
+                carregarComponentes();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        // ==========================================
+        // 4. MODAL DE PENDÊNCIAS
+        // ==========================================
+        const modal = document.getElementById("modal-pendencia");
+
+        document.getElementById("btn-abrir-pendencia-modal").addEventListener("click", () => {
+            modal.classList.remove("hidden");
+        });
+
+        document.getElementById("modal-btn-cancelar").addEventListener("click", () => {
+            modal.classList.add("hidden");
+        });
+
+        document.getElementById("modal-btn-salvar").addEventListener("click", async () => {
+            const titulo = document.getElementById("pendencia-titulo").value.trim();
+            const desc = document.getElementById("pendencia-desc").value.trim();
+            const bloqueante = document.getElementById("pendencia-bloqueante").checked;
+
+            if (!titulo) {
+                alert("Por favor, preencha o título da pendência");
+                return;
+            }
+
+            try {
+                await API.criarPendencia({
+                    componente_id: activeComponentId,
+                    titulo: titulo,
+                    descricao: desc,
+                    bloqueante: bloqueante
+                });
+                modal.classList.add("hidden");
+                abrirDrawerComponente(activeComponentId);
+                carregarComponentes();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        // ==========================================
+        // 5. CUSTOMIZADOR DE FLUXO
+        // ==========================================
+        const etapasCompContainer = document.getElementById("componente-etapas-list");
+
+        function renderComponenteEtapaInputs(etapasList) {
+            etapasCompContainer.innerHTML = etapasList.map((et, idx) => `
+                <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200 text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${idx + 1}</span>
+                    <input type="text" value="${et}" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                    <button type="button" class="text-slate-400 hover:text-red-500" onclick="this.closest('div').remove(); reordenarEtapasComp();">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                </div>
+            `).join("");
+        }
+
+        window.reordenarEtapasComp = function() {
+            Array.from(etapasCompContainer.children).forEach((child, idx) => {
+                child.querySelector("span").innerText = idx + 1;
+            });
+        };
+
+        document.getElementById("form-comp-template-fluxo").addEventListener("change", (e) => {
+            const val = e.target.value;
+            if (!val) return;
+
+            const selecionado = modelosFluxoGlobal.find(m => m.id === val);
+            if (selecionado && selecionado.etapas) {
+                renderComponenteEtapaInputs(selecionado.etapas);
+            }
+        });
+
+        document.getElementById("btn-comp-add-etapa").addEventListener("click", () => {
+            const idx = etapasCompContainer.children.length + 1;
+            const inputHtml = `
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200 text-xs">
+                <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${idx}</span>
+                <input type="text" placeholder="Nome da etapa" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                <button type="button" class="text-slate-400 hover:text-red-500" onclick="this.closest('div').remove(); reordenarEtapasComp();">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+            </div>
+            `;
+            etapasCompContainer.insertAdjacentHTML("beforeend", inputHtml);
+        });
+
+        document.getElementById("form-componente").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("form-comp-id").value;
+            const etapas = Array.from(etapasCompContainer.querySelectorAll("input")).map(input => input.value.trim());
+
+            if (etapas.length === 0) {
+                alert("O componente precisa possuir pelo menos uma etapa de fluxo");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/componentes/${id}/fluxo`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                    },
+                    body: JSON.stringify(etapas)
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.detail || "Erro ao salvar alterações no fluxo");
+                }
+
+                document.getElementById("modal-componente").classList.add("hidden");
+                carregarComponentes();
+                abrirDrawerComponente(id);
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        document.getElementById("btn-customizar-fluxo-componente").addEventListener("click", async () => {
+            if (!activeComponentId) return;
+            try {
+                const c = await API.getComponenteDetalhes(activeComponentId);
+
+                document.getElementById("form-comp-equip-id").value = c.equipamento_id;
+                document.getElementById("form-comp-id").value = c.id;
+                document.getElementById("form-comp-nome").value = c.nome;
+                document.getElementById("form-comp-nome").disabled = true;
+                document.getElementById("form-comp-prioridade").value = c.prioridade;
+                document.getElementById("form-comp-entrega").value = c.data_prevista || "";
+                document.getElementById("modal-componente-title").innerText = "Editar Fluxo de Produção";
+
+                const res = await fetch("/api/modelos-fluxo", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                modelosFluxoGlobal = await res.json();
+
+                const selectMod = document.getElementById("form-comp-template-fluxo");
+                selectMod.innerHTML = `
+                    <option value="">-- Carregar Template --</option>
+                    ${modelosFluxoGlobal.map(m => `<option value="${m.id}">${m.nome}</option>`).join("")}
+                `;
+
+                const nomesEtapas = c.etapas.map(et => et.nome);
+                renderComponenteEtapaInputs(nomesEtapas);
+
+                document.getElementById("modal-componente").classList.remove("hidden");
+
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        carregarComponentes();
+    </script>
+</body>
+</html>

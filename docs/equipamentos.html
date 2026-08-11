@@ -1,0 +1,446 @@
+<!DOCTYPE html><html class="light" lang="pt-br" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Equipamentos - CCP Industrial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#7f2a0f",
+                    "secondary": "#4d6075",
+                    "on-primary-fixed-variant": "#213f9a",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d3e4fe",
+                    "surface-container-high": "#dce9ff",
+                    "outline-variant": "#c5c5d4",
+                    "outline": "#757683",
+                    "bg-industrial": "#F8FAFC",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#444652",
+                    "secondary-fixed-dim": "#b5c8e0",
+                    "surface-bright": "#f8f9ff",
+                    "tertiary-fixed": "#ffdbd1",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#3d58b3",
+                    "on-surface": "#0b1c30",
+                    "secondary-container": "#cee2fa",
+                    "on-primary-container": "#7d97f6",
+                    "primary-container": "#002a86",
+                    "status-error": "#EF4444",
+                    "surface-variant": "#d3e4fe",
+                    "on-secondary-fixed": "#081d2f",
+                    "on-secondary-container": "#516479",
+                    "primary": "#001856",
+                    "border-subtle": "#E2E8F0",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container": "#e5eeff",
+                    "status-success": "#10B981",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#0b1c30",
+                    "inverse-primary": "#b6c4ff",
+                    "error-container": "#ffdad6",
+                    "background": "#f8f9ff",
+                    "secondary-fixed": "#d1e4fd",
+                    "data-text": "#0F172A",
+                    "surface-container-low": "#eff4ff",
+                    "inverse-surface": "#213145",
+                    "on-primary-fixed": "#001550",
+                    "tertiary-container": "#651700",
+                    "primary-fixed-dim": "#b6c4ff",
+                    "tertiary-fixed-dim": "#ffb5a0",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "status-warning": "#F59E0B",
+                    "primary-fixed": "#dce1ff",
+                    "on-tertiary-container": "#ed7c5b",
+                    "error": "#ba1a1a",
+                    "tertiary": "#400b00",
+                    "on-secondary-fixed-variant": "#36485c",
+                    "surface": "#f8f9ff",
+                    "on-tertiary-fixed": "#3b0900"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "table-row-height": "40px",
+                    "gutter": "16px",
+                    "density-compact": "4px",
+                    "margin-mobile": "16px",
+                    "density-comfortable": "12px",
+                    "margin-desktop": "24px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "label-bold": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "mono-data": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "label-bold": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-sm": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "mono-data": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        * { filter: none !important; backdrop-filter: none !important; }
+        .table-fixed-header { position: sticky; top: 0; z-index: 10; }
+    </style>
+</head>
+<body class="bg-industrial text-on-surface opacity-100">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col bg-surface border-r border-border-subtle w-64 transition-colors duration-150 ease-in-out opacity-100">
+<div class="p-6 flex flex-col gap-1 opacity-100">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary opacity-100">CCP</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant opacity-100">Controle de Produção</p>
+</div>
+<nav class="flex-1 px-3 space-y-1 opacity-100">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">home</span>
+<span class="font-body-md text-body-md">Painel de Controle</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out bg-primary-container text-on-primary-container font-bold opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">factory</span>
+<span class="font-body-md text-body-md">Equipamentos</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md text-body-md">Componentes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="view_kanban">view_kanban</span>
+<span class="font-body-md text-body-md">Kanban</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span class="font-body-md text-body-md">Entregas</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span class="font-body-md text-body-md">Indicadores</span>
+</a>
+</nav>
+<div class="p-3 border-t border-border-subtle opacity-100">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors duration-150 ease-in-out opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Configurações</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-64 h-20 z-30 flex flex-col justify-center px-6 bg-surface-container-lowest border-b border-border-subtle transition-all duration-200 opacity-100">
+<div class="flex items-center justify-between w-full opacity-100">
+<div class="flex flex-col gap-0.5 flex-1 opacity-100">
+<div class="font-headline-md text-headline-md font-black text-primary leading-tight opacity-100">Gestão de Equipamentos</div>
+</div>
+<div class="flex items-center gap-6 opacity-100">
+<div class="relative w-96 group opacity-100">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-[20px] group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+<input class="w-full bg-surface hover:bg-surface-container-low focus:bg-surface border border-border-subtle rounded-xl py-2 pl-10 pr-12 text-sm text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm opacity-100" placeholder="Buscar por cliente ou equipamento..." type="text">
+</div>
+<div class="flex items-center gap-3 pl-6 border-l border-border-subtle opacity-100">
+<div class="text-right opacity-100">
+<p class="font-label-bold text-label-bold text-on-surface opacity-100">Admin CCP</p>
+<p class="text-[10px] text-on-surface-variant opacity-100">Gerente Industrial</p>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-24 opacity-100">
+<div class="max-w-[1600px] mx-auto w-full space-y-6 opacity-100">
+<!-- Header Controls -->
+<div class="flex justify-between items-center opacity-100">
+<div class="flex gap-4 opacity-100">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-bold text-sm flex items-center gap-2 opacity-100">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span> Novo Equipamento
+                </button>
+<button class="px-4 py-2 bg-surface-container border border-border-subtle text-on-surface rounded-lg font-bold text-sm flex items-center gap-2 opacity-100">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span> Filtros
+                </button>
+</div>
+<div class="flex items-center gap-2 text-xs font-medium text-on-surface-variant opacity-100">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-status-error"></span> Crítico</span>
+<span class="flex items-center gap-1 ml-2"><span class="w-2 h-2 rounded-full bg-status-warning"></span> Alerta</span>
+<span class="flex items-center gap-1 ml-2"><span class="w-2 h-2 rounded-full bg-status-success"></span> Normal</span>
+</div>
+</div>
+<!-- Equipment List -->
+<div class="flex flex-col gap-4 opacity-100">
+<!-- Entry 1: Critical -->
+<div class="bg-surface-container-lowest rounded-xl border-l-4 border-l-status-error border-t border-r border-b border-border-subtle shadow-sm overflow-hidden opacity-100">
+<div class="p-4 bg-error-container/10 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle opacity-100">
+<div class="flex-1 min-w-[300px] opacity-100">
+<div class="flex items-center gap-3 opacity-100">
+<h2 class="font-headline-sm text-base font-bold text-on-surface opacity-100">Elevador EC30 - Comigo Santa Helena</h2>
+<span class="px-2 py-0.5 bg-status-error text-on-error text-[10px] font-bold rounded uppercase opacity-100">CRÍTICO</span>
+</div>
+<div class="flex items-center gap-4 mt-1 opacity-100">
+<span class="text-xs text-on-surface-variant font-medium">Cliente: <span class="text-on-surface">COMIGO</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Prazo: <span class="text-status-error font-bold">25/10 (5 dias)</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Componentes: <span class="text-on-surface">12 itens</span></span>
+<span class="text-xs text-on-surface-variant font-medium text-on-surface">OP: <span class="text-on-surface font-bold">132/45</span></span></div>
+</div>
+<div class="flex items-center gap-6 opacity-100">
+<div class="flex flex-col items-end gap-1 opacity-100">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase opacity-100">Percentual Geral</span>
+<div class="flex items-center gap-2 opacity-100">
+<div class="w-32 bg-surface-container-high h-2 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-error h-full rounded-full opacity-100" style="width: 35%"></div>
+</div>
+<span class="text-sm font-bold text-status-error opacity-100">35%</span>
+</div>
+</div>
+<button class="p-2 hover:bg-surface-container-high rounded-lg transition-colors opacity-100">
+<span class="material-symbols-outlined text-outline" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Components Sub-list -->
+<div class="overflow-x-auto opacity-100">
+<table class="w-full text-left border-collapse opacity-100">
+<thead>
+<tr class="bg-surface-container-low border-b border-border-subtle opacity-100">
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Nome do Componente</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Etapa Atual</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Status</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Progresso</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Prioridade</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Pendências / Bloqueios</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Previsão</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle opacity-100">
+<tr class="hover:bg-surface-bright transition-colors opacity-100">
+<td class="px-4 py-3 text-xs font-bold text-on-surface opacity-100">Estrutura Superior</td>
+<td class="px-4 py-3 text-xs text-on-surface opacity-100">Corte CNC</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="px-2 py-1 bg-status-error/10 text-status-error text-[10px] font-bold rounded border border-status-error/20 opacity-100">ATRASADO</span>
+</td>
+<td class="px-4 py-3 opacity-100">
+<div class="flex items-center justify-center gap-2 opacity-100">
+<div class="w-16 bg-surface-container-high h-1.5 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-error h-full rounded-full" style="width: 15%"></div>
+</div>
+<span class="text-[10px] font-bold text-status-error">15%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="material-symbols-outlined text-status-error text-sm" data-icon="priority_high">priority_high</span>
+</td>
+<td class="px-4 py-3 text-[10px] text-on-surface-variant italic opacity-100">Material SAE1020 em falta no estoque</td>
+<td class="px-4 py-3 text-xs text-on-surface font-mono opacity-100">22/10</td>
+</tr>
+<tr class="hover:bg-surface-bright transition-colors opacity-100">
+<td class="px-4 py-3 text-xs font-bold text-on-surface opacity-100">Eixo Principal</td>
+<td class="px-4 py-3 text-xs text-on-surface opacity-100">Usinagem</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="px-2 py-1 bg-status-warning/10 text-status-warning text-[10px] font-bold rounded border border-status-warning/20 opacity-100">BLOQUEADO</span>
+</td>
+<td class="px-4 py-3 opacity-100">
+<div class="flex items-center justify-center gap-2 opacity-100">
+<div class="w-16 bg-surface-container-high h-1.5 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-warning h-full rounded-full" style="width: 45%"></div>
+</div>
+<span class="text-[10px] font-bold text-status-warning">45%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="material-symbols-outlined text-status-warning text-sm" data-icon="keyboard_double_arrow_up">keyboard_double_arrow_up</span>
+</td>
+<td class="px-4 py-3 text-[10px] text-on-surface-variant italic opacity-100">Aguardando revisão do desenho (B)</td>
+<td class="px-4 py-3 text-xs text-on-surface font-mono opacity-100">24/10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Entry 2: Normal/Warning -->
+<div class="bg-surface-container-lowest rounded-xl border-l-4 border-l-status-warning border-t border-r border-b border-border-subtle shadow-sm overflow-hidden opacity-100">
+<div class="p-4 bg-status-warning/5 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle opacity-100">
+<div class="flex-1 min-w-[300px] opacity-100">
+<div class="flex items-center gap-3 opacity-100">
+<h2 class="font-headline-sm text-base font-bold text-on-surface opacity-100">Prensa PH-500T - Barry Callebaut</h2>
+<span class="px-2 py-0.5 bg-status-warning text-on-surface text-[10px] font-bold rounded uppercase opacity-100">ALERTA</span>
+</div>
+<div class="flex items-center gap-4 mt-1 opacity-100">
+<span class="text-xs text-on-surface-variant font-medium">Cliente: <span class="text-on-surface">BARRY CALLEBAUT</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Prazo: <span class="text-on-surface font-bold">15/11 (26 dias)</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Componentes: <span class="text-on-surface">08 itens</span></span>
+<span class="text-xs text-on-surface-variant font-medium">OP: <span class="text-on-surface">456/22</span></span></div>
+</div>
+<div class="flex items-center gap-6 opacity-100">
+<div class="flex flex-col items-end gap-1 opacity-100">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase opacity-100">Percentual Geral</span>
+<div class="flex items-center gap-2 opacity-100">
+<div class="w-32 bg-surface-container-high h-2 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-warning h-full rounded-full opacity-100" style="width: 62%"></div>
+</div>
+<span class="text-sm font-bold text-status-warning opacity-100">62%</span>
+</div>
+</div>
+<button class="p-2 hover:bg-surface-container-high rounded-lg transition-colors opacity-100">
+<span class="material-symbols-outlined text-outline" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Components Sub-list -->
+<div class="overflow-x-auto opacity-100">
+<table class="w-full text-left border-collapse opacity-100">
+<thead>
+<tr class="bg-surface-container-low border-b border-border-subtle opacity-100">
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Nome do Componente</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Etapa Atual</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Status</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Progresso</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Prioridade</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Pendências / Bloqueios</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Previsão</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle opacity-100">
+<tr class="hover:bg-surface-bright transition-colors opacity-100">
+<td class="px-4 py-3 text-xs font-bold text-on-surface opacity-100">Cilindro Hidráulico Mod. A</td>
+<td class="px-4 py-3 text-xs text-on-surface opacity-100">Montagem Final</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="px-2 py-1 bg-status-success/10 text-status-success text-[10px] font-bold rounded border border-status-success/20 opacity-100">NO PRAZO</span>
+</td>
+<td class="px-4 py-3 opacity-100">
+<div class="flex items-center justify-center gap-2 opacity-100">
+<div class="w-16 bg-surface-container-high h-1.5 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-success h-full rounded-full" style="width: 85%"></div>
+</div>
+<span class="text-[10px] font-bold text-status-success">85%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="expand">expand</span>
+</td>
+<td class="px-4 py-3 text-[10px] text-on-surface-variant italic opacity-100">Nenhuma pendência ativa</td>
+<td class="px-4 py-3 text-xs text-on-surface font-mono opacity-100">25/10</td>
+</tr>
+<tr class="hover:bg-surface-bright transition-colors opacity-100">
+<td class="px-4 py-3 text-xs font-bold text-on-surface opacity-100">Base Estrutural Soldada</td>
+<td class="px-4 py-3 text-xs text-on-surface opacity-100">Caldeiraria</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="px-2 py-1 bg-status-warning/10 text-status-warning text-[10px] font-bold rounded border border-status-warning/20 opacity-100">EM ATRASO</span>
+</td>
+<td class="px-4 py-3 opacity-100">
+<div class="flex items-center justify-center gap-2 opacity-100">
+<div class="w-16 bg-surface-container-high h-1.5 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-warning h-full rounded-full" style="width: 40%"></div>
+</div>
+<span class="text-[10px] font-bold text-status-warning">40%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="material-symbols-outlined text-status-warning text-sm" data-icon="keyboard_double_arrow_up">keyboard_double_arrow_up</span>
+</td>
+<td class="px-4 py-3 text-[10px] text-on-surface-variant italic opacity-100">Falta de soldadores qualificados no turno B</td>
+<td class="px-4 py-3 text-xs text-on-surface font-mono opacity-100">30/10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Entry 3: Normal -->
+<div class="bg-surface-container-lowest rounded-xl border-l-4 border-l-status-success border-t border-r border-b border-border-subtle shadow-sm overflow-hidden opacity-100">
+<div class="p-4 bg-status-success/5 flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle opacity-100">
+<div class="flex-1 min-w-[300px] opacity-100">
+<div class="flex items-center gap-3 opacity-100">
+<h2 class="font-headline-sm text-base font-bold text-on-surface opacity-100">TC-42" - Potencial Biocombustíveis</h2>
+<span class="px-2 py-0.5 bg-status-success text-on-error text-[10px] font-bold rounded uppercase opacity-100">NORMAL</span>
+</div>
+<div class="flex items-center gap-4 mt-1 opacity-100">
+<span class="text-xs text-on-surface-variant font-medium">Cliente: <span class="text-on-surface">POTENCIAL</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Prazo: <span class="text-on-surface font-bold">12/12 (53 dias)</span></span>
+<span class="text-xs text-on-surface-variant font-medium">Componentes: <span class="text-on-surface">15 itens</span></span>
+<span class="text-xs text-on-surface-variant font-medium">OP: <span class="text-on-surface">789/23</span></span></div>
+</div>
+<div class="flex items-center gap-6 opacity-100">
+<div class="flex flex-col items-end gap-1 opacity-100">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase opacity-100">Percentual Geral</span>
+<div class="flex items-center gap-2 opacity-100">
+<div class="w-32 bg-surface-container-high h-2 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-success h-full rounded-full opacity-100" style="width: 12%"></div>
+</div>
+<span class="text-sm font-bold text-status-success opacity-100">12%</span>
+</div>
+</div>
+<button class="p-2 hover:bg-surface-container-high rounded-lg transition-colors opacity-100">
+<span class="material-symbols-outlined text-outline" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Components Sub-list -->
+<div class="overflow-x-auto opacity-100">
+<table class="w-full text-left border-collapse opacity-100">
+<thead>
+<tr class="bg-surface-container-low border-b border-border-subtle opacity-100">
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Nome do Componente</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Etapa Atual</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Status</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Progresso</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase text-center">Prioridade</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Pendências / Bloqueios</th>
+<th class="px-4 py-2 font-label-bold text-[10px] text-on-surface-variant uppercase">Previsão</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle opacity-100">
+<tr class="hover:bg-surface-bright transition-colors opacity-100">
+<td class="px-4 py-3 text-xs font-bold text-on-surface opacity-100">Tambor de Alimentação</td>
+<td class="px-4 py-3 text-xs text-on-surface opacity-100">Listagem de Materiais</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="px-2 py-1 bg-status-success/10 text-status-success text-[10px] font-bold rounded border border-status-success/20 opacity-100">INICIADO</span>
+</td>
+<td class="px-4 py-3 opacity-100">
+<div class="flex items-center justify-center gap-2 opacity-100">
+<div class="w-16 bg-surface-container-high h-1.5 rounded-full overflow-hidden opacity-100">
+<div class="bg-status-success h-full rounded-full" style="width: 20%"></div>
+</div>
+<span class="text-[10px] font-bold text-status-success">20%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-center opacity-100">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="low_priority">low_priority</span>
+</td>
+<td class="px-4 py-3 text-[10px] text-on-surface-variant italic opacity-100">Aguardando liberação do PCP</td>
+<td class="px-4 py-3 text-xs text-on-surface font-mono opacity-100">10/11</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+
+</body></html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .kanban-col { min-height: 500px; }
+        .kanban-col.drag-over { background-color: #EFF6FF; outline: 2px dashed #93C5FD; outline-offset: -4px; border-radius: 0.5rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-full mx-auto w-full space-y-4">
+
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-bold text-slate-700 uppercase">Fluxo Produtivo Kanban</h2>
+                <div class="text-[10px] text-slate-500 font-semibold italic">Arrastar e soltar (drag & drop) para movimentar etapas</div>
+            </div>
+
+            <!-- Colunas montadas dinamicamente via JS a partir das etapas reais em uso -->
+            <div id="kanban-board" class="flex gap-4 overflow-x-auto pb-4">
+                <div class="text-xs text-slate-400 font-semibold p-6">Carregando quadro...</div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("kanban");
+        renderHeader("Fluxo Kanban");
+
+        window.excluirComponente = async function(id) {
+            if (!confirm("Tem certeza que deseja excluir este componente?")) return;
+            try {
+                await API.deletarComponente(id);
+                await carregarKanban();
+            } catch (err) {
+                alert("Erro ao excluir componente: " + err.message);
+            }
+        };
+
+        const board = document.getElementById("kanban-board");
+        const SEM_FLUXO = "__SEM_FLUXO__";
+        const NAO_INICIADO = "__NAO_INICIADO__";
+
+        // Cache em memória dos componentes carregados na última renderização,
+        // usado para resolver rapidamente o fluxo real de quem está sendo arrastado.
+        let componentesCache = [];
+
+        function nomeColuna(chave) {
+            if (chave === SEM_FLUXO) return "Sem Fluxo Definido";
+            if (chave === NAO_INICIADO) return "Não Iniciado";
+            return chave;
+        }
+
+        /**
+         * Monta a lista ordenada de colunas a partir das etapas REAIS presentes
+         * nos fluxos dos componentes (em vez de uma lista fixa de 5 nomes).
+         * Cada componente pode ter um fluxo padrão ou personalizado (RN-005),
+         * então a ordem das colunas é definida pela menor "ordem" observada
+         * para cada nome de etapa entre todos os fluxos.
+         */
+        function montarColunas(componentes) {
+            const infoPorNome = new Map(); // nome -> { minOrdem }
+            let temSemFluxo = false;
+            let temNaoIniciado = false;
+
+            componentes.forEach(c => {
+                if (!c.etapas || c.etapas.length === 0) {
+                    temSemFluxo = true;
+                    return;
+                }
+                if (!c.etapa_atual_id) temNaoIniciado = true;
+                c.etapas.forEach(et => {
+                    const atual = infoPorNome.get(et.nome);
+                    if (!atual || et.ordem < atual.minOrdem) {
+                        infoPorNome.set(et.nome, { minOrdem: et.ordem });
+                    }
+                });
+            });
+
+            const colunas = Array.from(infoPorNome.entries())
+                .sort((a, b) => a[1].minOrdem - b[1].minOrdem || a[0].localeCompare(b[0]))
+                .map(([nome]) => nome);
+
+            // "Não Iniciado" representa a posição ANTES da 1ª etapa (índice -1),
+            // por isso entra como a primeira coluna do board.
+            if (temNaoIniciado) colunas.unshift(NAO_INICIADO);
+            if (temSemFluxo) colunas.push(SEM_FLUXO);
+            return colunas;
+        }
+
+        function chaveEtapaAtual(componente) {
+            if (!componente.etapas || componente.etapas.length === 0) return SEM_FLUXO;
+            if (!componente.etapa_atual_id) return NAO_INICIADO;
+            const et = componente.etapas.find(e => e.id === componente.etapa_atual_id);
+            return et ? et.nome : SEM_FLUXO;
+        }
+
+        function renderBoard(chaves, componentes) {
+            board.innerHTML = "";
+
+            const grupos = new Map(chaves.map(k => [k, []]));
+            componentes.forEach(c => {
+                const chave = chaveEtapaAtual(c);
+                if (!grupos.has(chave)) grupos.set(chave, []); // segurança: etapa inesperada ainda ganha coluna
+                grupos.get(chave).push(c);
+            });
+
+            grupos.forEach((lista, chave) => {
+                const col = document.createElement("div");
+                col.className = "bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col gap-3 w-64 flex-shrink-0";
+
+                const isSemFluxo = chave === SEM_FLUXO;
+                col.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span class="text-xs font-bold ${isSemFluxo ? 'text-red-500' : 'text-slate-500'} uppercase truncate" title="${nomeColuna(chave)}">${nomeColuna(chave)}</span>
+                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">${lista.length}</span>
+                    </div>
+                    <div class="kanban-col flex flex-col gap-2"></div>
+                `;
+
+                const dropzone = col.querySelector(".kanban-col");
+                dropzone.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add("drag-over");
+                });
+                dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
+                dropzone.addEventListener("drop", (e) => {
+                    dropzone.classList.remove("drag-over");
+                    onDrop(e, chave);
+                });
+
+                lista.forEach(c => {
+                    let cardBorder = "border-l-blue-900";
+                    if (c.status === "bloqueado") cardBorder = "border-l-red-500";
+                    else if (c.prioridade === "critica" || c.prioridade === "urgente") cardBorder = "border-l-amber-500";
+
+                    const card = document.createElement("div");
+                    card.id = `card-${c.id}`;
+                    card.className = `bg-white border-l-4 ${cardBorder} border-t border-r border-b border-slate-200 rounded-xl p-3 shadow-xs space-y-2 cursor-grab active:cursor-grabbing hover:border-slate-300 transition-colors`;
+                    card.draggable = true;
+                    card.addEventListener("dragstart", (e) => e.dataTransfer.setData("text", c.id));
+                    card.addEventListener("click", () => {
+                        window.location.href = `equipamentos.html?id=${c.equipamento_id}&componente_id=${c.id}`;
+                    });
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start gap-1">
+                            <h4 class="text-xs font-bold text-slate-800 leading-snug">${c.nome}</h4>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase">${c.prioridade}</span>
+                                <button onclick="event.stopPropagation(); excluirComponente('${c.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Excluir Componente">
+                                    <span class="material-symbols-outlined text-[14px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-500">
+    <span class="truncate max-w-[110px]">${c.equipamento_nome}${c.equipamento_op ? ' · OP ' + c.equipamento_op : ''}</span>
+    <span class="font-bold text-blue-950">${c.percentual}%</span>
+</div>
+<div class="text-[10px] text-slate-400 truncate">${c.cliente_nome || ''}</div>
+                    `;
+                    dropzone.appendChild(card);
+                });
+
+                board.appendChild(col);
+            });
+        }
+
+        async function carregarKanban() {
+            try {
+                const componentes = await API.getComponentes();
+                componentesCache = componentes;
+                const chaves = montarColunas(componentes);
+                renderBoard(chaves, componentes);
+            } catch (err) {
+                console.error("Erro ao montar quadro Kanban:", err);
+                board.innerHTML = `<div class="text-xs text-red-500 font-semibold p-6">Erro ao carregar o quadro: ${err.message}</div>`;
+            }
+        }
+
+        async function onDrop(e, destinoChave) {
+            e.preventDefault();
+            const id = e.dataTransfer.getData("text");
+            if (!id) return;
+
+            try {
+                // Busca o fluxo REAL do componente (fonte da verdade), não uma lista fixa de colunas.
+                const comp = await API.getComponenteDetalhes(id);
+
+                if (!comp.etapas || comp.etapas.length === 0) {
+                    alert("Este componente não possui um fluxo de fabricação definido. Defina o fluxo antes de movimentá-lo no Kanban.");
+                    return;
+                }
+
+                if (destinoChave === SEM_FLUXO) {
+                    // Não faz sentido soltar em "Sem Fluxo Definido"
+                    return;
+                }
+
+                const indexAtual = comp.etapa_atual_id
+                    ? comp.etapas.findIndex(et => et.id === comp.etapa_atual_id)
+                    : -1; // -1 = "Não Iniciado", posição antes da 1ª etapa
+
+                if (destinoChave === NAO_INICIADO) {
+                    // Não existe endpoint para "desiniciar" um componente já em andamento.
+                    if (indexAtual === -1) return; // já está lá, soltar na própria coluna: nada a fazer
+                    alert('Não é possível retornar um componente ao estado "Não Iniciado" pelo Kanban.');
+                    return;
+                }
+
+                const indexDestino = comp.etapas.findIndex(et => et.nome === destinoChave);
+
+                if (indexDestino === -1) {
+                    alert(`Este componente não possui a etapa "${destinoChave}" no seu fluxo de fabricação.\nEtapas do fluxo: ${comp.etapas.map(et => et.nome).join(" → ")}`);
+                    return;
+                }
+
+                if (indexDestino === indexAtual) {
+                    // Soltou na própria coluna atual: nada a fazer.
+                    return;
+                }
+
+                if (indexDestino === indexAtual + 1) {
+                    await API.avancarEtapa(id);
+                } else if (indexDestino === indexAtual - 1) {
+                    await API.retornarEtapa(id);
+                } else {
+                    const etapaAtualNome = indexAtual >= 0 ? comp.etapas[indexAtual].nome : "Não iniciado";
+                    alert(`Apenas movimentações lineares de avanço ou retorno de uma única etapa são permitidas.\nEtapa atual: "${etapaAtualNome}" → Destino: "${destinoChave}"`);
+                    return;
+                }
+
+                await carregarKanban();
+            } catch (err) {
+                alert(err.message);
+                await carregarKanban();
+            }
+        }
+
+        carregarKanban();
+    </script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen flex flex-col gap-6 mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            
+            <!-- Abas das Configurações -->
+            <div class="border-b border-slate-200 flex gap-6">
+                <button id="tab-clientes" class="border-b-2 border-blue-900 pb-2.5 text-xs font-bold text-blue-900 transition-colors">Clientes</button>
+                <button id="tab-usuarios" class="border-b-2 border-transparent pb-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">Usuários</button>
+                <button id="tab-modelos" class="border-b-2 border-transparent pb-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">Modelos de Fluxo</button>
+            </div>
+
+            <!-- 1. Aba Clientes -->
+            <div id="content-clientes" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase">Gestão de Clientes</h3>
+                    <button id="btn-novo-cliente" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">add</span> Novo Cliente
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Nome</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Sigla</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Observações</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-clientes" class="divide-y divide-slate-100 text-xs text-slate-800">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Aba Usuários -->
+            <div id="content-usuarios" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase">Gestão de Usuários</h3>
+                    <button id="btn-novo-usuario" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">add</span> Novo Usuário
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Nome</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">E-mail</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Cargo</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Perfil</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-usuarios" class="divide-y divide-slate-100 text-xs text-slate-800">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Aba Modelos de Fluxo -->
+            <div id="content-modelos" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase">Modelos de Fluxo (Templates)</h3>
+                    <button id="btn-novo-modelo" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">add</span> Novo Template
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Nome do Modelo</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Descrição</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase">Sequência de Etapas</th>
+                                <th class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-modelos" class="divide-y divide-slate-100 text-xs text-slate-800">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modais Genéricos de Cadastro/Edição -->
+    
+    <!-- Modal Cliente -->
+    <div id="modal-cliente" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 id="modal-cliente-title" class="text-sm font-bold text-slate-800">Cadastrar Cliente</h3>
+            <form id="form-cliente" class="space-y-3">
+                <input type="hidden" id="form-cliente-id">
+                <div class="space-y-1">
+                    <label for="form-cliente-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome do Cliente</label>
+                    <input id="form-cliente-nome" type="text" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-cliente-sigla" class="text-[10px] font-bold text-slate-500 uppercase">Sigla (Identificação)</label>
+                    <input id="form-cliente-sigla" type="text" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-cliente-obs" class="text-[10px] font-bold text-slate-500 uppercase">Observações</label>
+                    <textarea id="form-cliente-obs" rows="2" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs modal-fechar">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Usuário -->
+    <div id="modal-usuario" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 id="modal-usuario-title" class="text-sm font-bold text-slate-800">Cadastrar Usuário</h3>
+            <form id="form-usuario" class="space-y-3">
+                <input type="hidden" id="form-usuario-id">
+                <div class="space-y-1">
+                    <label for="form-usuario-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome Completo</label>
+                    <input id="form-usuario-nome" type="text" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-usuario-email" class="text-[10px] font-bold text-slate-500 uppercase">E-mail</label>
+                    <input id="form-usuario-email" type="email" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-usuario-cargo" class="text-[10px] font-bold text-slate-500 uppercase">Cargo / Setor</label>
+                    <input id="form-usuario-cargo" type="text" placeholder="Ex: Analista PCP" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-usuario-perfil" class="text-[10px] font-bold text-slate-500 uppercase">Perfil de Acesso</label>
+                    <select id="form-usuario-perfil" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                        <option value="pcp">Analista PCP (Total)</option>
+                        <option value="visualizador">Diretoria / Consulta</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label for="form-usuario-senha" class="text-[10px] font-bold text-slate-500 uppercase">Senha</label>
+                    <input id="form-usuario-senha" type="password" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs" placeholder="Senha do Usuário">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs modal-fechar">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Modelo de Fluxo -->
+    <div id="modal-modelo" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 class="text-sm font-bold text-slate-800">Criar Novo Modelo de Fluxo</h3>
+            <form id="form-modelo" class="space-y-3">
+                <div class="space-y-1">
+                    <label for="form-modelo-nome" class="text-[10px] font-bold text-slate-500 uppercase">Nome do Template</label>
+                    <input id="form-modelo-nome" type="text" required placeholder="Ex: Componentes Estruturais" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
+                    <label for="form-modelo-desc" class="text-[10px] font-bold text-slate-500 uppercase">Descrição</label>
+                    <input id="form-modelo-desc" type="text" placeholder="Para conjuntos caldeirados simples" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1.5">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase block">Etapas de Fabricação (Mínimo 1)</span>
+                    <div id="modelo-etapas-list" class="space-y-1 max-h-40 overflow-y-auto border border-slate-100 p-2 rounded-lg bg-slate-50">
+                        <!-- Gerador de Inputs dinâmicos -->
+                    </div>
+                    <button type="button" id="btn-add-etapa-input" class="text-[10px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[14px]">add</span> Adicionar Etapa
+                    </button>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs modal-fechar">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Salvar Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("settings");
+        renderHeader("Painel de Configurações");
+
+        // Gerenciamento de Abas
+        const tabClientes = document.getElementById("tab-clientes");
+        const tabUsuarios = document.getElementById("tab-usuarios");
+        const tabModelos = document.getElementById("tab-modelos");
+        const contentClientes = document.getElementById("content-clientes");
+        const contentUsuarios = document.getElementById("content-usuarios");
+        const contentModelos = document.getElementById("content-modelos");
+
+        function resetTabs() {
+            [tabClientes, tabUsuarios, tabModelos].forEach(t => t.className = "border-b-2 border-transparent pb-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors");
+            [contentClientes, contentUsuarios, contentModelos].forEach(c => c.classList.add("hidden"));
+        }
+
+        tabClientes.addEventListener("click", () => {
+            resetTabs();
+            tabClientes.className = "border-b-2 border-blue-900 pb-2.5 text-xs font-bold text-blue-900 transition-colors";
+            contentClientes.classList.remove("hidden");
+            carregarClientes();
+        });
+
+        tabUsuarios.addEventListener("click", () => {
+            resetTabs();
+            tabUsuarios.className = "border-b-2 border-blue-900 pb-2.5 text-xs font-bold text-blue-900 transition-colors";
+            contentUsuarios.classList.remove("hidden");
+            carregarUsuarios();
+        });
+
+        tabModelos.addEventListener("click", () => {
+            resetTabs();
+            tabModelos.className = "border-b-2 border-blue-900 pb-2.5 text-xs font-bold text-blue-900 transition-colors";
+            contentModelos.classList.remove("hidden");
+            carregarModelos();
+        });
+
+        // Fechar modais ao clicar em cancelar
+        document.querySelectorAll(".modal-fechar").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.target.closest(".fixed").classList.add("hidden");
+            });
+        });
+
+        // ==========================================
+        // 1. GESTÃO DE CLIENTES
+        // ==========================================
+        async function carregarClientes() {
+            try {
+                // Como não criamos um endpoint de listar clientes diretamente no API auxiliar global, 
+                // fazemos um fetch rápido ou chamamos da API se mapeado
+                const res = await fetch("/api/clientes", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                const clientes = await res.json();
+                
+                const table = document.getElementById("tabela-clientes");
+                table.innerHTML = clientes.map(c => `
+                    <tr>
+                        <td class="px-4 py-3 font-bold text-slate-800">${c.nome}</td>
+                        <td class="px-4 py-3 font-mono font-bold">${c.sigla}</td>
+                        <td class="px-4 py-3 text-slate-500">${c.observacoes || 'Sem observações'}</td>
+                        <td class="px-4 py-3 text-right">
+                            <button class="text-red-600 hover:text-red-800 font-bold ml-3" onclick="deletarCliente('${c.id}')">Excluir</button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.getElementById("btn-novo-cliente").addEventListener("click", () => {
+            document.getElementById("form-cliente-id").value = "";
+            document.getElementById("form-cliente").reset();
+            document.getElementById("modal-cliente-title").innerText = "Cadastrar Cliente";
+            document.getElementById("modal-cliente").classList.remove("hidden");
+        });
+
+        document.getElementById("form-cliente").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("form-cliente-id").value;
+            const nome = document.getElementById("form-cliente-nome").value.trim();
+            const sigla = document.getElementById("form-cliente-sigla").value.trim();
+            const obs = document.getElementById("form-cliente-obs").value.trim();
+
+            const body = { nome, sigla, observacoes: obs };
+            
+            try {
+                const response = await fetch("/api/clientes", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao salvar cliente");
+                }
+                document.getElementById("modal-cliente").classList.add("hidden");
+                carregarClientes();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        window.deletarCliente = async function(id) {
+            if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+            try {
+                await fetch(`/api/clientes/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                carregarClientes();
+            } catch (err) {
+                alert("Erro ao excluir cliente");
+            }
+        };
+
+        // ==========================================
+        // 2. GESTÃO DE USUÁRIOS
+        // ==========================================
+        async function carregarUsuarios() {
+            try {
+                const res = await fetch("/api/usuarios", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                const usuarios = await res.json();
+                
+                const table = document.getElementById("tabela-usuarios");
+                table.innerHTML = usuarios.map(u => `
+                    <tr>
+                        <td class="px-4 py-3 font-bold text-slate-800">${u.nome}</td>
+                        <td class="px-4 py-3 font-mono">${u.email}</td>
+                        <td class="px-4 py-3 text-slate-500">${u.cargo || 'N/A'}</td>
+                        <td class="px-4 py-3 uppercase font-bold text-[10px] text-blue-900">${u.perfil}</td>
+                        <td class="px-4 py-3 text-right">
+                            <button class="text-red-600 hover:text-red-800 font-bold ml-3" onclick="deletarUsuario('${u.id}')">Excluir</button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.getElementById("btn-novo-usuario").addEventListener("click", () => {
+            document.getElementById("form-usuario-id").value = "";
+            document.getElementById("form-usuario").reset();
+            document.getElementById("modal-usuario-title").innerText = "Cadastrar Usuário";
+            document.getElementById("modal-usuario").classList.remove("hidden");
+        });
+
+        document.getElementById("form-usuario").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById("form-usuario-nome").value.trim();
+            const email = document.getElementById("form-usuario-email").value.trim();
+            const cargo = document.getElementById("form-usuario-cargo").value.trim();
+            const perfil = document.getElementById("form-usuario-perfil").value;
+            const senha = document.getElementById("form-usuario-senha").value;
+
+            const body = { nome, email, cargo, perfil, senha_hash: senha };
+
+            try {
+                const response = await fetch("/api/usuarios", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao salvar usuário");
+                }
+                document.getElementById("modal-usuario").classList.add("hidden");
+                carregarUsuarios();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        window.deletarUsuario = async function(id) {
+            if (!confirm("Tem certeza que deseja desativar este usuário?")) return;
+            try {
+                const response = await fetch(`/api/usuarios/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao excluir");
+                }
+                carregarUsuarios();
+            } catch (err) {
+                alert(err.message);
+            }
+        };
+
+        // ==========================================
+        // 3. GESTÃO DE MODELOS DE FLUXO
+        // ==========================================
+        async function carregarModelos() {
+            try {
+                const res = await fetch("/api/modelos-fluxo", {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                const modelos = await res.json();
+                
+                const table = document.getElementById("tabela-modelos");
+                table.innerHTML = modelos.map(m => `
+                    <tr>
+                        <td class="px-4 py-3 font-bold text-slate-800">${m.nome}</td>
+                        <td class="px-4 py-3 text-slate-500">${m.descricao || 'Sem descrição'}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1">
+                                ${m.etapas.map(et => `<span class="bg-blue-50 text-blue-900 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-blue-100">${et}</span>`).join(" → ")}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <button class="text-red-600 hover:text-red-800 font-bold" onclick="deletarModelo('${m.id}')">Excluir</button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        const etapasContainer = document.getElementById("modelo-etapas-list");
+        
+        function renderEtapaInputs(etapasArray = ["Engenharia", "Listagem"]) {
+            etapasContainer.innerHTML = etapasArray.map((et, index) => `
+                <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200">
+                    <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${index + 1}</span>
+                    <input type="text" value="${et}" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                    <button type="button" class="text-slate-400 hover:text-red-500" onclick="removerEtapaInput(this)">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                </div>
+            `).join("");
+        }
+
+        document.getElementById("btn-novo-modelo").addEventListener("click", () => {
+            document.getElementById("form-modelo").reset();
+            renderEtapaInputs(["Engenharia", "Listagem", "Programação CNC", "Corte", "Caldeiraria", "Pintura", "Montagem", "Qualidade", "Expedição"]);
+            document.getElementById("modal-modelo").classList.remove("hidden");
+        });
+
+        document.getElementById("btn-add-etapa-input").addEventListener("click", () => {
+            const index = etapasContainer.children.length + 1;
+            const inputHtml = `
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded border border-slate-200">
+                <span class="text-[10px] font-bold text-slate-400 min-w-[20px] text-center">${index}</span>
+                <input type="text" placeholder="Nome da etapa" required class="flex-1 border-0 focus:ring-0 p-0 text-xs text-slate-700">
+                <button type="button" class="text-slate-400 hover:text-red-500" onclick="removerEtapaInput(this)">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+            </div>
+            `;
+            etapasContainer.insertAdjacentHTML("beforeend", inputHtml);
+        });
+
+        window.removerEtapaInput = function(btn) {
+            btn.closest("div").remove();
+            // Reordenar os números
+            Array.from(etapasContainer.children).forEach((child, idx) => {
+                child.querySelector("span").innerText = idx + 1;
+            });
+        };
+
+        document.getElementById("form-modelo").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById("form-modelo-nome").value.trim();
+            const desc = document.getElementById("form-modelo-desc").value.trim();
+            
+            const etapas = Array.from(etapasContainer.querySelectorAll("input")).map(input => input.value.trim());
+
+            const body = { nome, descricao: desc, etapas };
+
+            try {
+                const response = await fetch("/api/modelos-fluxo", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao salvar template");
+                }
+                document.getElementById("modal-modelo").classList.add("hidden");
+                carregarModelos();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        window.deletarModelo = async function(id) {
+            if (!confirm("Tem certeza que deseja desativar este modelo de fluxo?")) return;
+            try {
+                await fetch(`/api/modelos-fluxo/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("ccp_token")}` }
+                });
+                carregarModelos();
+            } catch (err) {
+                alert("Erro ao excluir modelo");
+            }
+        };
+
+        // Carregar a aba inicial
+        carregarClientes();
+    </script>
+</body>
+</html>

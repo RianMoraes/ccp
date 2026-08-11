@@ -1,0 +1,22 @@
+# Ambiente virtual Python (reconstruído via requirements.txt)
+venv/
+.venv/
+env/
+
+# Cache e bytecode Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Banco de dados local (não deve ir para o repositório)
+backend/database.db
+*.db
+
+# Variáveis de ambiente com segredos
+.env
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
