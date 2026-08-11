@@ -1,16 +1,43 @@
-from app.models import StatusEquipamentoEnum
 from app.models import (
-    Componente, Fluxo, Etapa, Historico, Usuario, Pendencia, Equipamento,
+    Componente, Fluxo, Etapa, Historico, Usuario, Pendencia,
     PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, IDTecnica, Desenho
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from sqlmodel import Session, select
 from app.database import get_session
+from app.models import (
+    Componente, Fluxo, Etapa, Historico, Usuario,
+    PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, IDTecnica, Desenho
+)
 from app.routes.auth import obter_usuario_atual
-from datetime import datetime, date
+from app.models import Equipamento, StatusEquipamentoEnum
+from datetime import datetime
 
 router = APIRouter(prefix="/api/componentes", tags=["Componentes"])
+
+def sincronizar_status_equipamento(session: Session, equipamento_id: str):
+    """Mantém o status do equipamento sincronizado com o progresso real dos componentes.
+    Quando todos os componentes ativos chegam a 100%, o equipamento vira 'carregado'.
+    Se algum componente voltar (retrabalho) ou for excluído, reavalia e reverte se preciso."""
+    equipamento = session.get(Equipamento, equipamento_id)
+    if not equipamento or not equipamento.ativo:
+        return
+    if equipamento.status == StatusEquipamentoEnum.CANCELADO:
+        return  # não mexe em equipamento cancelado
+
+    componentes_ativos = session.exec(
+        select(Componente).where(Componente.equipamento_id == equipamento_id, Componente.ativo == True)
+    ).all()
+
+    todos_completos = bool(componentes_ativos) and all(c.percentual >= 100 for c in componentes_ativos)
+
+    if todos_completos and equipamento.status != StatusEquipamentoEnum.CARREGADO:
+        equipamento.status = StatusEquipamentoEnum.CARREGADO
+        session.add(equipamento)
+    elif not todos_completos and equipamento.status == StatusEquipamentoEnum.CARREGADO:
+        equipamento.status = StatusEquipamentoEnum.EM_PRODUCAO
+        session.add(equipamento)
 
 def registrar_historico(session: Session, componente_id: str, usuario: str, evento: str, descricao: str):
     """Auxiliar para geração de histórico imutável (RN-019, RN-020)."""
@@ -23,29 +50,6 @@ def registrar_historico(session: Session, componente_id: str, usuario: str, even
     )
     session.add(hist)
 
-def sincronizar_status_equipamento(session: Session, equipamento_id: str):
-    """Mantém o status do equipamento sincronizado com o progresso real dos componentes.
-    Quando todos os componentes ativos chegam a 100%, o equipamento vira 'carregado'.
-    Se algum componente voltar (retrabalho), o equipamento volta para 'em_producao'."""
-    equipamento = session.get(Equipamento, equipamento_id)
-    if not equipamento or not equipamento.ativo:
-        return
-    if equipamento.status == StatusEquipamentoEnum.CANCELADO:
-        return  # não mexe em equipamento cancelado
-
-    componentes = session.exec(
-        select(Componente).where(Componente.equipamento_id == equipamento_id, Componente.ativo == True)
-    ).all()
-
-    todos_completos = bool(componentes) and all(c.percentual >= 100 for c in componentes)
-
-    if todos_completos and equipamento.status != StatusEquipamentoEnum.CARREGADO:
-        equipamento.status = StatusEquipamentoEnum.CARREGADO
-        session.add(equipamento)
-    elif not todos_completos and equipamento.status == StatusEquipamentoEnum.CARREGADO:
-        equipamento.status = StatusEquipamentoEnum.EM_PRODUCAO
-        session.add(equipamento)
-
 @router.get("")
 def listar_todos_componentes(
     equipamento_id: Optional[str] = None,
@@ -54,11 +58,7 @@ def listar_todos_componentes(
     session: Session = Depends(get_session),
     usuario_atual: Usuario = Depends(obter_usuario_atual)
 ):
-    query = (
-        select(Componente)
-        .join(Equipamento, Componente.equipamento_id == Equipamento.id)
-        .where(Componente.ativo == True, Equipamento.ativo == True)
-    )
+    query = select(Componente).where(Componente.ativo == True)
     if equipamento_id:
         query = query.where(Componente.equipamento_id == equipamento_id)
     if prioridade:
@@ -83,8 +83,6 @@ def listar_todos_componentes(
             "id": c.id,
             "equipamento_id": c.equipamento_id,
             "equipamento_nome": c.equipamento.nome if c.equipamento else "",
-            "equipamento_op": c.equipamento.op if c.equipamento else "",   
-            "equipamento_rv": c.equipamento.rv if c.equipamento else "",
             "cliente_nome": c.equipamento.cliente.nome if c.equipamento and c.equipamento.cliente else "",
             "nome": c.nome,
             "descricao": c.descricao,
@@ -147,8 +145,6 @@ def obter_componente_detalhe(
         "id": c.id,
         "equipamento_id": c.equipamento_id,
         "equipamento_nome": c.equipamento.nome if c.equipamento else "",
-        "equipamento_op": c.equipamento.op if c.equipamento else None,
-        "equipamento_rv": c.equipamento.rv if c.equipamento else None,
         "cliente_nome": c.equipamento.cliente.nome if c.equipamento and c.equipamento.cliente else "",
         "nome": c.nome,
         "descricao": c.descricao,
@@ -159,7 +155,6 @@ def obter_componente_detalhe(
         "data_prevista": c.data_prevista,
         "data_conclusao": c.data_conclusao,
         "observacoes": c.observacoes,
-        "etapa_atual_id": c.etapa_atual_id,
         "etapas": etapas,
         "ids_tecnicas": ids_detalhado,
         "historico": historico
@@ -179,7 +174,7 @@ def alterar_prioridade(
     prioridade_antiga = c.prioridade
     c.prioridade = nova_prioridade
     c.atualizado_em = datetime.utcnow()
-
+    
     registrar_historico(
         session, c.id, usuario_atual.nome, "Alteração de Prioridade",
         f"Prioridade alterada de '{prioridade_antiga.value}' para '{nova_prioridade.value}'."
@@ -189,25 +184,6 @@ def alterar_prioridade(
     session.commit()
     session.refresh(c)
     return c
-
-@router.patch("/{componente_id}/prazo")
-def alterar_prazo_componente(
-    componente_id: str,
-    nova_data: date,
-    session: Session = Depends(get_session),
-    usuario_atual: Usuario = Depends(obter_usuario_atual)
-):
-    c = session.get(Componente, componente_id)
-    if not c or not c.ativo:
-        raise HTTPException(status_code=404, detail="Componente não encontrado")
-
-    c.data_prevista = nova_data
-    c.atualizado_em = datetime.utcnow()
-
-    session.add(c)
-    session.commit()
-    session.refresh(c)
-    return {"id": c.id, "data_prevista": c.data_prevista}
 
 @router.patch("/{componente_id}/avancar-etapa")
 def avancar_etapa(
@@ -281,7 +257,8 @@ def avancar_etapa(
         session, c.id, usuario_atual.nome, "Avanço de Etapa",
         f"Avançou da etapa '{etapa_atual.nome if etapa_atual else 'N/A'}' para '{nova_etapa.nome}'."
     )
-    sincronizar_status_equipamento(session, c.equipamento_id)    
+    
+    sincronizar_status_equipamento(session, c.equipamento_id)
     session.add(c)
     session.commit()
     session.refresh(c)
@@ -338,6 +315,7 @@ def retornar_etapa(
         session, c.id, usuario_atual.nome, "Retorno de Etapa (Retrabalho)",
         f"Retornou da etapa '{etapa_atual.nome}' para '{nova_etapa.nome}' por motivos de retrabalho."
     )
+    
     sincronizar_status_equipamento(session, c.equipamento_id)
     session.add(c)
     session.commit()
@@ -506,9 +484,15 @@ def deletar_componente(
     if not c or not c.ativo:
         raise HTTPException(status_code=404, detail="Componente não encontrado")
 
+    equipamento_id = c.equipamento_id
+
     c.ativo = False
     c.atualizado_em = datetime.utcnow()
     session.add(c)
+
+    # Reavalia o status do equipamento pai, já que remover um componente
+    # pode mudar se todos os componentes ativos restantes estão 100% ou não.
+    sincronizar_status_equipamento(session, equipamento_id)
+
     session.commit()
-    sincronizar_status_equipamento(session, c.equipamento_id)
     return {"message": "Componente deletado com sucesso (soft delete)"}
