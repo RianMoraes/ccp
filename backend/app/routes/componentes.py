@@ -1,13 +1,12 @@
-from app.models import StatusEquipamentoEnum
 from app.models import (
     Componente, Fluxo, Etapa, Historico, Usuario, Pendencia, Equipamento,
-    PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, IDTecnica, Desenho
+    PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, StatusEquipamentoEnum, IDTecnica, Desenho
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from sqlmodel import Session, select
 from app.database import get_session
-from app.routes.auth import obter_usuario_atual
+from app.routes.auth import obter_usuario_atual, exigir_operacao
 from datetime import datetime, date
 
 router = APIRouter(prefix="/api/componentes", tags=["Componentes"])
@@ -26,7 +25,8 @@ def registrar_historico(session: Session, componente_id: str, usuario: str, even
 def sincronizar_status_equipamento(session: Session, equipamento_id: str):
     """Mantém o status do equipamento sincronizado com o progresso real dos componentes.
     Quando todos os componentes ativos chegam a 100%, o equipamento vira 'carregado'.
-    Se algum componente voltar (retrabalho), o equipamento volta para 'em_producao'."""
+    Se um equipamento já carregado receber um novo componente ou voltar para retrabalho,
+    ele passa para 'carregado_com_pendencia' até todos os componentes serem concluídos."""
     equipamento = session.get(Equipamento, equipamento_id)
     if not equipamento or not equipamento.ativo:
         return
@@ -42,8 +42,11 @@ def sincronizar_status_equipamento(session: Session, equipamento_id: str):
     if todos_completos and equipamento.status != StatusEquipamentoEnum.CARREGADO:
         equipamento.status = StatusEquipamentoEnum.CARREGADO
         session.add(equipamento)
-    elif not todos_completos and equipamento.status == StatusEquipamentoEnum.CARREGADO:
-        equipamento.status = StatusEquipamentoEnum.EM_PRODUCAO
+    elif not todos_completos and equipamento.status in (
+        StatusEquipamentoEnum.CARREGADO,
+        StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA,
+    ):
+        equipamento.status = StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA
         session.add(equipamento)
 
 @router.get("")
@@ -126,6 +129,7 @@ def obter_componente_detalhe(
     ).all()
     
     ids_detalhado = []
+    substituicoes = {id_tec.substitui_id: id_tec for id_tec in ids_tecnicas if id_tec.substitui_id}
     for id_tec in ids_tecnicas:
         desenhos = session.exec(
             select(Desenho).where(Desenho.id_tecnica_id == id_tec.id)
@@ -135,7 +139,24 @@ def obter_componente_detalhe(
             "numero": id_tec.numero,
             "op": id_tec.op,
             "rv": id_tec.rv,
+            "cliente_documento": id_tec.cliente_documento,
+            "equipamento_documento": id_tec.equipamento_documento,
+            "componente_documento": id_tec.componente_documento,
             "local": id_tec.local,
+            "status": id_tec.status,
+            "versao": id_tec.versao,
+            "substitui_id": id_tec.substitui_id,
+            "substitui_numero": next((item.numero for item in ids_tecnicas if item.id == id_tec.substitui_id), None),
+            "substituida_por_id": substituicoes[id_tec.id].id if id_tec.id in substituicoes else None,
+            "substituida_por_numero": substituicoes[id_tec.id].numero if id_tec.id in substituicoes else None,
+            "liberado_por": id_tec.liberado_por,
+            "data_liberacao": id_tec.data_liberacao,
+            "arquivo_nome": id_tec.arquivo_nome,
+            "tem_arquivo": bool(id_tec.arquivo_caminho),
+            "arquivo_compactado": id_tec.arquivo_compactado,
+            "tamanho_original": id_tec.tamanho_original,
+            "tamanho_armazenado": id_tec.tamanho_armazenado,
+            "motivo_revisao": id_tec.motivo_revisao,
             "desenhos": desenhos
         })
         
@@ -165,7 +186,7 @@ def obter_componente_detalhe(
         "historico": historico
     }
 
-@router.patch("/{componente_id}/prioridade")
+@router.patch("/{componente_id}/prioridade", dependencies=[Depends(exigir_operacao)])
 def alterar_prioridade(
     componente_id: str,
     nova_prioridade: PrioridadeEnum,
@@ -190,7 +211,7 @@ def alterar_prioridade(
     session.refresh(c)
     return c
 
-@router.patch("/{componente_id}/prazo")
+@router.patch("/{componente_id}/prazo", dependencies=[Depends(exigir_operacao)])
 def alterar_prazo_componente(
     componente_id: str,
     nova_data: date,
@@ -209,7 +230,7 @@ def alterar_prazo_componente(
     session.refresh(c)
     return {"id": c.id, "data_prevista": c.data_prevista}
 
-@router.patch("/{componente_id}/avancar-etapa")
+@router.patch("/{componente_id}/avancar-etapa", dependencies=[Depends(exigir_operacao)])
 def avancar_etapa(
     componente_id: str,
     session: Session = Depends(get_session),
@@ -287,7 +308,7 @@ def avancar_etapa(
     session.refresh(c)
     return c
 
-@router.patch("/{componente_id}/retornar-etapa")
+@router.patch("/{componente_id}/retornar-etapa", dependencies=[Depends(exigir_operacao)])
 def retornar_etapa(
     componente_id: str,
     session: Session = Depends(get_session),
@@ -344,7 +365,7 @@ def retornar_etapa(
     session.refresh(c)
     return c
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_operacao)])
 def criar_componente(
     dados: dict,  # Recebe { equipamento_id, nome, descricao, prioridade, responsavel, data_prevista, observacoes, etapas: ["Etapa 1", "Etapa 2"] }
     session: Session = Depends(get_session),
@@ -418,10 +439,11 @@ def criar_componente(
         session, c.id, usuario_atual.nome, "Criação de Componente",
         f"Componente cadastrado com fluxo personalizado de {len(etapas_nomes)} etapas."
     )
+    sincronizar_status_equipamento(session, c.equipamento_id)
     session.commit()
     return c
 
-@router.put("/{componente_id}/fluxo")
+@router.put("/{componente_id}/fluxo", dependencies=[Depends(exigir_operacao)])
 def atualizar_fluxo_etapas(
     componente_id: str,
     etapas_nomes: List[str],
@@ -496,7 +518,7 @@ def listar_pendencias_componente(
         .order_by(Pendencia.aberta_em.desc())
     ).all()
 
-@router.delete("/{componente_id}")
+@router.delete("/{componente_id}", dependencies=[Depends(exigir_operacao)])
 def deletar_componente(
     componente_id: str,
     session: Session = Depends(get_session),
@@ -511,4 +533,5 @@ def deletar_componente(
     session.add(c)
     session.commit()
     sincronizar_status_equipamento(session, c.equipamento_id)
+    session.commit()
     return {"message": "Componente deletado com sucesso (soft delete)"}

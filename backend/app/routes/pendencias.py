@@ -2,14 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from sqlmodel import Session, select
 from app.database import get_session
-from app.models import Pendencia, Componente, Usuario, StatusComponenteEnum, StatusPendenciaEnum
-from app.routes.auth import obter_usuario_atual
+from app.models import (
+    Pendencia, Componente, IDTecnica, Usuario, StatusComponenteEnum,
+    StatusIDTecnicaEnum, StatusPendenciaEnum
+)
+from app.routes.auth import obter_usuario_atual, exigir_operacao
 from app.routes.componentes import registrar_historico
 from datetime import datetime
 
 router = APIRouter(prefix="/api/pendencias", tags=["Pendências"])
 
-@router.post("", response_model=Pendencia, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Pendencia, status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_operacao)])
 def abrir_pendencia(
     pendencia: Pendencia,
     session: Session = Depends(get_session),
@@ -40,7 +43,7 @@ def abrir_pendencia(
     session.refresh(pendencia)
     return pendencia
 
-@router.patch("/{pendencia_id}/encerrar", response_model=Pendencia)
+@router.patch("/{pendencia_id}/encerrar", response_model=Pendencia, dependencies=[Depends(exigir_operacao)])
 def encerrar_pendencia(
     pendencia_id: str,
     session: Session = Depends(get_session),
@@ -52,6 +55,18 @@ def encerrar_pendencia(
         
     if p.status == StatusPendenciaEnum.RESOLVIDA:
         raise HTTPException(status_code=400, detail="Pendência já está resolvida")
+
+    id_em_revisao = session.exec(
+        select(IDTecnica).where(
+            IDTecnica.pendencia_revisao_id == p.id,
+            IDTecnica.status == StatusIDTecnicaEnum.EM_REVISAO,
+        )
+    ).first()
+    if id_em_revisao:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A pendência será encerrada automaticamente quando uma nova versão da ID {id_em_revisao.numero} for importada."
+        )
         
     p.status = StatusPendenciaEnum.RESOLVIDA
     p.encerrada_por = usuario_atual.nome

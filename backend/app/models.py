@@ -32,6 +32,7 @@ class StatusEquipamentoEnum(str, Enum):
     CONCLUIDO = "concluido"
     CANCELADO = "cancelado"
     CARREGADO = "carregado"
+    CARREGADO_COM_PENDENCIA = "carregado_com_pendencia"
 
 class PerfilUsuarioEnum(str, Enum):
     ADMIN = "admin"
@@ -42,6 +43,13 @@ class PerfilUsuarioEnum(str, Enum):
 class StatusPendenciaEnum(str, Enum):
     ABERTA = "aberta"
     RESOLVIDA = "resolvida"
+
+class StatusIDTecnicaEnum(str, Enum):
+    LIBERADA = "liberada"
+    EM_REVISAO = "em_revisao"
+    REVISADA = "revisada"
+    SUBSTITUIDA = "substituida"
+    CANCELADA = "cancelada"
 
 # --- MODELOS ---
 
@@ -169,7 +177,29 @@ class IDTecnica(SQLModel, table=True):
     numero: str = Field(index=True)
     op: Optional[str] = Field(default=None)
     rv: Optional[str] = Field(default=None)
+    cliente_documento: Optional[str] = Field(default=None)
+    equipamento_documento: Optional[str] = Field(default=None)
+    componente_documento: Optional[str] = Field(default=None)
     local: Optional[str] = Field(default=None)
+    status: StatusIDTecnicaEnum = Field(default=StatusIDTecnicaEnum.LIBERADA)
+    versao: int = Field(default=1)
+    id_origem_id: Optional[str] = Field(default=None, index=True)
+    substitui_id: Optional[str] = Field(default=None, index=True)
+    liberado_por: Optional[str] = Field(default=None)
+    data_liberacao: Optional[datetime] = Field(default=None)
+    arquivo_nome: Optional[str] = Field(default=None)
+    arquivo_caminho: Optional[str] = Field(default=None)
+    modelo_documento: Optional[str] = Field(default=None)
+    hash_arquivo: Optional[str] = Field(default=None, index=True)
+    tamanho_original: Optional[int] = Field(default=None)
+    tamanho_armazenado: Optional[int] = Field(default=None)
+    arquivo_compactado: bool = Field(default=False)
+    motivo_revisao: Optional[str] = Field(default=None)
+    retornada_por: Optional[str] = Field(default=None)
+    retornada_em: Optional[datetime] = Field(default=None)
+    pendencia_revisao_id: Optional[str] = Field(default=None)
+    importado_por: Optional[str] = Field(default=None)
+    importado_em: Optional[datetime] = Field(default=None)
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     
     componente: Componente = Relationship(back_populates="ids_tecnicas")
@@ -185,6 +215,11 @@ class Desenho(SQLModel, table=True):
     descricao: Optional[str] = Field(default=None)
     quantidade: int = Field(default=1)
     revisao: Optional[str] = Field(default=None)
+    copias: int = Field(default=1)
+    unidade: Optional[str] = Field(default=None)
+    item: Optional[int] = Field(default=None)
+    pagina_origem: Optional[int] = Field(default=None)
+    quantidade_original: Optional[str] = Field(default=None)
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     
     id_tecnica: IDTecnica = Relationship(back_populates="desenhos")

@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlmodel import Session, select, SQLModel
 from app.database import get_session
 from app.models import Equipamento, Componente, Usuario, StatusEquipamentoEnum, StatusComponenteEnum, Etapa
-from app.routes.auth import obter_usuario_atual
+from app.routes.auth import obter_usuario_atual, exigir_operacao
 from datetime import datetime, date
 
 router = APIRouter(prefix="/api/equipamentos", tags=["Equipamentos"])
@@ -67,8 +67,10 @@ def listar_equipamentos(
 
         # Determinar a criticidade baseada no prazo (d-06)
         criticidade = "normal"
-        if eq.status == "carregado":
+        if eq.status == StatusEquipamentoEnum.CARREGADO:
             criticidade = "carregado"
+        elif eq.status == StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA:
+            criticidade = "pendencia_pos_carregamento"
         elif eq.data_entrega:
             dias_restantes = (eq.data_entrega - date.today()).days
             if dias_restantes <= 5:
@@ -78,7 +80,11 @@ def listar_equipamentos(
 
         # Equipamento 100% concluído: status e criticidade exibidos como "carregado"
         status_exibicao = eq.status
-        if componentes and pct_agregado >= 100:
+        if (
+            componentes
+            and pct_agregado >= 100
+            and eq.status != StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA
+        ):
             status_exibicao = "carregado"
             criticidade = "carregado"
 
@@ -119,8 +125,10 @@ def obter_equipamento(
         
     # Indentação corrigida no bloco abaixo:
     criticidade = "normal"
-    if eq.status == "carregado":
+    if eq.status == StatusEquipamentoEnum.CARREGADO:
         criticidade = "carregado"
+    elif eq.status == StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA:
+        criticidade = "pendencia_pos_carregamento"
     elif eq.data_entrega:
         dias_restantes = (eq.data_entrega - date.today()).days
         if dias_restantes <= 5:
@@ -158,7 +166,7 @@ def obter_equipamento(
         ]
     }
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_operacao)])
 def criar_equipamento(
     dados: EquipamentoCreate,
     session: Session = Depends(get_session),
@@ -184,7 +192,7 @@ def criar_equipamento(
     session.refresh(eq)
     return {"id": eq.id, "nome": eq.nome, "op": eq.op, "rv": eq.rv, "status": eq.status, "cliente_id": eq.cliente_id}
 
-@router.put("/{equipamento_id}")
+@router.put("/{equipamento_id}", dependencies=[Depends(exigir_operacao)])
 def atualizar_equipamento(
     equipamento_id: str,
     dados: EquipamentoUpdate,
@@ -211,7 +219,7 @@ def atualizar_equipamento(
     session.refresh(eq)
     return {"id": eq.id, "nome": eq.nome, "op": eq.op, "rv": eq.rv, "status": eq.status, "cliente_id": eq.cliente_id}
 
-@router.delete("/{equipamento_id}")
+@router.delete("/{equipamento_id}", dependencies=[Depends(exigir_operacao)])
 def deletar_equipamento(
     equipamento_id: str,
     session: Session = Depends(get_session),
@@ -237,7 +245,7 @@ def deletar_equipamento(
     session.commit()
     return {"message": f"Equipamento e {len(componentes)} componente(s) vinculado(s) deletados com sucesso (soft delete)"}
 
-@router.patch("/{equipamento_id}/prazo")
+@router.patch("/{equipamento_id}/prazo", dependencies=[Depends(exigir_operacao)])
 def atualizar_prazo_equipamento(
     equipamento_id: str,
     nova_data: date,

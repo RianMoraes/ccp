@@ -3,12 +3,12 @@ from typing import List
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import Usuario, PerfilUsuarioEnum
-from app.routes.auth import obter_usuario_atual, gerar_hash_senha
+from app.routes.auth import obter_usuario_atual, gerar_hash_senha, exigir_administrador
 from datetime import datetime
 
 router = APIRouter(prefix="/api/usuarios", tags=["Usuários"])
 
-@router.get("", response_model=List[Usuario])
+@router.get("", response_model=List[Usuario], dependencies=[Depends(exigir_administrador)])
 def listar_usuarios(
     session: Session = Depends(get_session),
     usuario_atual: Usuario = Depends(obter_usuario_atual)
@@ -16,7 +16,7 @@ def listar_usuarios(
     """Retorna todos os usuários cadastrados e ativos no sistema."""
     return session.exec(select(Usuario).where(Usuario.ativo == True)).all()
 
-@router.post("", response_model=Usuario, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Usuario, status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_administrador)])
 def cadastrar_usuario(
     dados: Usuario,
     session: Session = Depends(get_session),
@@ -38,7 +38,7 @@ def cadastrar_usuario(
     session.refresh(dados)
     return dados
 
-@router.put("/{usuario_id}", response_model=Usuario)
+@router.put("/{usuario_id}", response_model=Usuario, dependencies=[Depends(exigir_administrador)])
 def atualizar_usuario(
     usuario_id: str,
     dados: Usuario,
@@ -72,7 +72,7 @@ def atualizar_usuario(
     session.refresh(user)
     return user
 
-@router.delete("/{usuario_id}")
+@router.delete("/{usuario_id}", dependencies=[Depends(exigir_administrador)])
 def deletar_usuario(
     usuario_id: str,
     session: Session = Depends(get_session),

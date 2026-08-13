@@ -33,7 +33,7 @@ def run_seed():
             email="admin@ccp.com.br",
             senha_hash=SENHA_PADRAO_HASH,
             cargo="Gerente Industrial",
-            perfil=PerfilUsuarioEnum.PCP,
+            perfil=PerfilUsuarioEnum.ADMIN,
             ativo=True
         )
         session.add(admin_pcp)

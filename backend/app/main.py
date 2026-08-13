@@ -4,10 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pathlib import Path
 from app.database import init_db
-from app.routes import auth, clientes, equipamentos, componentes, pendencias, export, busca, usuarios, modelos_fluxo
+from app.routes import auth, clientes, equipamentos, componentes, pendencias, export, busca, usuarios, modelos_fluxo, folhas_id
 from sqlmodel import Session, select
 from app.database import get_session
-from app.models import Componente, Equipamento, Etapa, StatusComponenteEnum, StatusPendenciaEnum, Pendencia, StatusEtapaEnum
+from app.models import (
+    Componente, Equipamento, Etapa, StatusComponenteEnum,
+    StatusEquipamentoEnum, StatusPendenciaEnum, Pendencia, StatusEtapaEnum
+)
 from datetime import date, datetime, timedelta
 from typing import List
 
@@ -41,6 +44,7 @@ app.include_router(export.router)
 app.include_router(busca.router)
 app.include_router(usuarios.router)
 app.include_router(modelos_fluxo.router)
+app.include_router(folhas_id.router)
 
 # Servir o Frontend estático (pasta frontend/ ao lado da pasta backend/)
 # Acessível em http://localhost:8000/app/...
@@ -55,7 +59,10 @@ def obter_resumo_dashboard(session: Session = Depends(get_session)):
     # 1. Equipamentos em atraso (prazo expirado e não concluído)
     atrasados_query = select(Equipamento).where(
         Equipamento.ativo == True,
-        Equipamento.status == "em_producao",
+        Equipamento.status.in_([
+            StatusEquipamentoEnum.EM_PRODUCAO,
+            StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA,
+        ]),
         Equipamento.data_entrega < date.today()
     )
     atrasados = len(session.exec(atrasados_query).all())
@@ -90,7 +97,10 @@ def obter_prioridade_dia(session: Session = Depends(get_session)):
     prioritarios = session.exec(
         select(Equipamento).where(
             Equipamento.ativo == True,
-            Equipamento.status == "em_producao"
+            Equipamento.status.in_([
+                StatusEquipamentoEnum.EM_PRODUCAO,
+                StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA,
+            ])
         ).order_by(Equipamento.data_entrega).limit(5)
     ).all()
 

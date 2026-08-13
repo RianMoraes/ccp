@@ -21,6 +21,18 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 
+def exigir_perfis(*perfis_permitidos: PerfilUsuarioEnum):
+    """Cria uma dependencia que autoriza somente os perfis informados."""
+    def validar(usuario: Usuario = Depends(obter_usuario_atual)) -> Usuario:
+        if usuario.perfil not in perfis_permitidos:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Seu perfil nao possui permissao para realizar esta acao.",
+            )
+        return usuario
+    return validar
+
+
 def verificar_senha(senha_plana: str, senha_hash: str) -> bool:
     # Como o hash do seed foi mockado simplificado, aceitamos correspondência direta se o hash falhar
     try:
@@ -72,10 +84,17 @@ def obter_usuario_atual(token: str = Depends(oauth2_scheme), session: Session = 
         raise credentials_exception
     return usuario
 
+
+exigir_operacao = exigir_perfis(
+    PerfilUsuarioEnum.ADMIN,
+    PerfilUsuarioEnum.PCP,
+)
+exigir_administrador = exigir_perfis(PerfilUsuarioEnum.ADMIN)
+
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
     usuario = session.exec(select(Usuario).where(Usuario.email == form_data.username)).first()
-    if not usuario or not verificar_senha(form_data.password, usuario.senha_hash):
+    if not usuario or not usuario.ativo or not verificar_senha(form_data.password, usuario.senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-mail ou senha incorretos",

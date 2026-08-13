@@ -3,7 +3,7 @@ from typing import List
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import ModeloFluxo, EtapaModelo, Usuario
-from app.routes.auth import obter_usuario_atual
+from app.routes.auth import obter_usuario_atual, exigir_administrador
 from datetime import datetime
 
 router = APIRouter(prefix="/api/modelos-fluxo", tags=["Modelos de Fluxo"])
@@ -29,7 +29,7 @@ def listar_modelos(
         })
     return result
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_administrador)])
 def criar_modelo(
     dados: dict,  # Recebe { nome, descricao, etapas: ["Etapa 1", "Etapa 2"] }
     session: Session = Depends(get_session),
@@ -65,7 +65,7 @@ def criar_modelo(
         "etapas": etapas
     }
 
-@router.delete("/{modelo_id}")
+@router.delete("/{modelo_id}", dependencies=[Depends(exigir_administrador)])
 def deletar_modelo(
     modelo_id: str,
     session: Session = Depends(get_session),

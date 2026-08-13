@@ -3,7 +3,7 @@ from typing import List
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import Cliente, Usuario
-from app.routes.auth import obter_usuario_atual
+from app.routes.auth import obter_usuario_atual, exigir_operacao
 from datetime import datetime
 
 router = APIRouter(prefix="/api/clientes", tags=["Clientes"])
@@ -27,7 +27,7 @@ def obter_cliente(
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return cliente
 
-@router.post("", response_model=Cliente, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Cliente, status_code=status.HTTP_201_CREATED, dependencies=[Depends(exigir_operacao)])
 def criar_cliente(
     cliente: Cliente,
     session: Session = Depends(get_session),
@@ -43,7 +43,7 @@ def criar_cliente(
     session.refresh(cliente)
     return cliente
 
-@router.put("/{cliente_id}", response_model=Cliente)
+@router.put("/{cliente_id}", response_model=Cliente, dependencies=[Depends(exigir_operacao)])
 def atualizar_cliente(
     cliente_id: str,
     dados_atualizacao: Cliente,
@@ -64,7 +64,7 @@ def atualizar_cliente(
     session.refresh(cliente)
     return cliente
 
-@router.delete("/{cliente_id}")
+@router.delete("/{cliente_id}", dependencies=[Depends(exigir_operacao)])
 def deletar_cliente(
     cliente_id: str,
     session: Session = Depends(get_session),
