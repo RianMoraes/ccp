@@ -215,6 +215,50 @@
         </div>
     </div>
 
+    <!-- Modal de Importação de Folha de ID -->
+    <div id="modal-folha-id" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex items-start justify-between gap-4 p-5 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-800">picture_as_pdf</span> Importar Folha de ID</h3>
+                    <p id="folha-id-componente" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <button id="btn-fechar-folha-id" class="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4">
+                <div class="flex flex-col sm:flex-row gap-3 items-end bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <div class="flex-1 w-full space-y-1">
+                        <label for="folha-id-arquivo" class="text-[10px] font-bold text-slate-500 uppercase">PDF ou imagens JPG/JPEG</label>
+                        <input id="folha-id-arquivo" type="file" multiple accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-white file:text-blue-900 hover:file:bg-blue-50">
+                        <p class="text-[9px] text-slate-400">Para várias páginas em imagem, selecione todos os JPEGs na ordem desejada.</p>
+                    </div>
+                    <button id="btn-analisar-folha-id" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">document_search</span> Analisar arquivo
+                    </button>
+                </div>
+                <div id="folha-id-estado" class="hidden text-xs rounded-xl p-3"></div>
+                <div id="folha-id-previa" class="hidden space-y-4">
+                    <div id="folha-id-resumo" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+                    <div id="folha-id-avisos" class="hidden space-y-1"></div>
+                    <label id="folha-id-substituicao" class="hidden items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 cursor-pointer">
+                        <input id="folha-id-confirma-substituicao" type="checkbox" class="mt-0.5 rounded text-amber-600 focus:ring-amber-500">
+                        <span id="folha-id-substituicao-texto"></span>
+                    </label>
+                    <div class="border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="grid grid-cols-[150px_1fr_90px] gap-2 px-3 py-2 bg-slate-100 text-[10px] font-bold uppercase text-slate-500">
+                            <span>Desenho</span><span>Descrição</span><span>Quantidade</span>
+                        </div>
+                        <div id="folha-id-desenhos" class="divide-y divide-slate-100 max-h-80 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50">
+                <button id="btn-cancelar-folha-id" class="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs">Cancelar</button>
+                <button id="btn-confirmar-folha-id" disabled class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs">Confirmar importação</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Novo Componente / Customizador de Fluxo -->
     <div id="modal-componente" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-lg shadow-2xl space-y-4">
@@ -275,9 +319,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         const equipamentoId = urlParams.get("id");
         const abrirComponenteId = urlParams.get("componente_id");
+        const abrirAba = urlParams.get("aba");
+        const abrirIDTecnicaId = urlParams.get("id_tecnica_id");
 
         let activeComponentId = null;
         let componentesCache = [];
+        let folhaIDArquivo = null;
+        let folhaIDDados = null;
+        let folhaIDRevisaoAlvo = null;
 
         if (!equipamentoId) {
             document.getElementById("eq-nome").innerText = "Equipamento não informado.";
@@ -360,13 +409,16 @@
             const critBadge = document.getElementById("eq-criticidade-badge");
             let critColor = "bg-green-500 text-white";
             if (eq.criticidade === "critico") critColor = "bg-red-500 text-white";
+            else if (eq.criticidade === "pendencia_pos_carregamento") critColor = "bg-purple-600 text-white";
             else if (eq.criticidade === "alerta") critColor = "bg-amber-500 text-slate-900";
             critBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded uppercase " + critColor;
-            critBadge.innerText = (eq.criticidade || "").toUpperCase();
+            critBadge.innerText = eq.criticidade === "pendencia_pos_carregamento"
+                ? "PENDÊNCIA PÓS-CARREGAMENTO"
+                : (eq.criticidade || "").toUpperCase();
 
             const statusBadge = document.getElementById("eq-status-badge");
             statusBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded uppercase border bg-slate-50 text-slate-600 border-slate-200";
-            statusBadge.innerText = (eq.status || "").replace("_", " ").toUpperCase();
+            statusBadge.innerText = (eq.status || "").replaceAll("_", " ").toUpperCase();
 
             document.getElementById("eq-progress-bar").style.width = `${eq.percentual_geral}%`;
             document.getElementById("eq-progress-label").innerText = `${eq.percentual_geral}%`;
@@ -509,12 +561,19 @@
 
                 const pendencias = await API.getPendenciasComponente(componenteId);
                 renderPendencias(pendencias);
-                ativarTab("fluxo");
+                ativarTab(abrirAba === "desenhos" && componenteId === abrirComponenteId ? "desenhos" : "fluxo");
 
                 const drawer = document.getElementById("drawer-componente");
                 drawer.classList.remove("hidden");
                 setTimeout(() => {
                     drawer.classList.remove("translate-x-full");
+                    if (abrirIDTecnicaId && componenteId === abrirComponenteId) {
+                        const cartaoID = document.getElementById(`id-tecnica-${abrirIDTecnicaId}`);
+                        if (cartaoID) {
+                            cartaoID.classList.add("ring-2", "ring-blue-500", "bg-blue-50");
+                            cartaoID.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                    }
                 }, 10);
 
             } catch (err) {
@@ -621,28 +680,267 @@
 
         function renderDesenhos(idsList) {
             const container = document.getElementById("tab-content-desenhos");
+            const botaoImportar = `
+                <button onclick="abrirImportacaoFolhaID()" class="w-full py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">upload_file</span> Importar Folha de ID
+                </button>`;
             if (!idsList || idsList.length === 0) {
-                container.innerHTML = `<p class="text-xs italic text-slate-500">Nenhuma ID ou Desenho vinculado a este componente.</p>`;
+                container.innerHTML = `${botaoImportar}<p class="text-xs italic text-slate-500 text-center py-3">Nenhuma ID ou desenho vinculado a este componente.</p>`;
                 return;
             }
-            container.innerHTML = idsList.map(id => `
-                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                    <div class="flex justify-between text-xs font-bold text-slate-700">
-                        <span>ID Técnica: ${id.numero}</span>
-                        <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
+            const idsOrdenadas = [...idsList].sort((a, b) => (b.versao || 1) - (a.versao || 1));
+            container.innerHTML = botaoImportar + idsOrdenadas.map(id => {
+                const status = id.status || "liberada";
+                const statusTexto = { liberada: "Liberada", em_revisao: "Em revisão", revisada: "Versão anterior", substituida: "Substituída", cancelada: "Cancelada" }[status] || status;
+                const statusClasse = status === "em_revisao" ? "bg-red-100 text-red-700" : ['revisada', 'substituida'].includes(status) ? "bg-slate-200 text-slate-600" : "bg-green-100 text-green-700";
+                return `
+                <div id="id-tecnica-${id.id}" class="bg-slate-50 border border-slate-200 rounded-xl ${['revisada', 'substituida'].includes(status) ? 'opacity-70' : ''}">
+                    <div class="flex justify-between items-start gap-2 p-3">
+                        <div class="min-w-0">
+                            <button onclick="alternarIDTecnica('${id.id}')" class="flex items-center gap-2 flex-wrap text-left hover:text-blue-900" title="Expandir ou recolher ID">
+                                <span id="id-tecnica-icone-${id.id}" class="material-symbols-outlined text-[17px] text-slate-500">chevron_right</span>
+                                <span class="text-xs font-bold text-slate-800">ID ${escapeHtml(id.numero)}</span>
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${statusClasse}">${statusTexto}</span>
+                                <span class="text-[9px] text-slate-400 font-bold">V${id.versao || 1}</span>
+                            </button>
+                            <p class="text-[10px] text-slate-400 mt-0.5">OP ${escapeHtml(id.op || 'N/A')} · RV ${escapeHtml(id.rv || 'N/A')}</p>
+                            ${id.arquivo_compactado && id.tamanho_original ? `<p class="text-[9px] text-emerald-700 mt-0.5">PDF otimizado · ${formatarTamanho(id.tamanho_original)} → ${formatarTamanho(id.tamanho_armazenado)}</p>` : ''}
+                        </div>
+                        <div class="flex gap-1 shrink-0">
+                            ${id.tem_arquivo ? `<button onclick="abrirPDFFolhaID('${id.id}')" title="Abrir PDF" class="p-1 text-blue-800 hover:bg-blue-100 rounded"><span class="material-symbols-outlined text-[17px]">picture_as_pdf</span></button>` : ''}
+                            ${status === 'liberada' ? `<button onclick="retornarIDRevisao('${id.id}', '${escapeHtml(id.numero)}')" title="Retornar para revisão" class="p-1 text-red-600 hover:bg-red-100 rounded"><span class="material-symbols-outlined text-[17px]">assignment_return</span></button>` : ''}
+                            ${status === 'em_revisao' ? `<button onclick="abrirImportacaoFolhaID('${id.id}', '${escapeHtml(id.numero)}')" title="Importar revisão" class="p-1 text-purple-700 hover:bg-purple-100 rounded"><span class="material-symbols-outlined text-[17px]">upload_file</span></button>` : ''}
+                            <button onclick="excluirFolhaID('${id.id}', '${escapeHtml(id.numero)}')" title="Excluir ID" class="p-1 text-slate-500 hover:bg-red-100 hover:text-red-700 rounded"><span class="material-symbols-outlined text-[17px]">delete</span></button>
+                        </div>
                     </div>
-                    <div class="space-y-1">
-                        ${id.desenhos.map(d => `
-                            <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
-                                <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
-                                <span class="text-slate-500 max-w-[200px] truncate">${d.descricao || ''}</span>
-                                <span class="font-bold text-slate-700">Qtd: ${d.quantidade}</span>
-                            </div>
-                        `).join("")}
+                    <div id="id-tecnica-conteudo-${id.id}" class="hidden px-3 pb-3 space-y-2">
+                    ${status === 'em_revisao' && id.motivo_revisao ? `<p class="text-[10px] text-red-700 bg-red-50 border border-red-100 rounded p-2"><strong>Motivo:</strong> ${escapeHtml(id.motivo_revisao)}</p>` : ''}
+                    ${id.substituida_por_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substituída pela ID <strong>${escapeHtml(id.substituida_por_numero)}</strong></p>` : ''}
+                    ${id.substitui_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substitui a ID <strong>${escapeHtml(id.substitui_numero)}</strong></p>` : ''}
+                    <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                        <div class="grid grid-cols-[120px_1fr_65px] gap-2 px-2 py-1.5 bg-slate-100 text-[9px] font-bold uppercase text-slate-500">
+                            <span>Desenho</span><span>Descrição</span><span class="text-right">Qtd.</span>
+                        </div>
+                        ${(id.desenhos || []).map(d => `
+                            <div class="grid grid-cols-[120px_1fr_65px] gap-2 items-start px-2 py-1.5 border-t border-slate-100 text-[10px]">
+                                <span class="font-bold font-mono text-slate-800 break-all">${escapeHtml(d.codigo)}${d.revisao ? ' ' + escapeHtml(d.revisao) : ''}</span>
+                                <button class="text-left text-slate-500 truncate hover:text-slate-800" title="${escapeHtml(d.descricao || '')}" onclick="this.classList.toggle('truncate'); this.classList.toggle('whitespace-normal')">${escapeHtml(d.descricao || '')}</button>
+                                <span class="font-bold text-slate-700 text-right">${d.quantidade}${d.unidade ? ' ' + escapeHtml(d.unidade) : ''}</span>
+                            </div>`).join("")}
                     </div>
+                    </div>
+                </div>`;
+            }).join("");
+        }
+
+        window.alternarIDTecnica = function(idTecnicaId) {
+            const conteudo = document.getElementById(`id-tecnica-conteudo-${idTecnicaId}`);
+            const icone = document.getElementById(`id-tecnica-icone-${idTecnicaId}`);
+            if (!conteudo || !icone) return;
+            const recolhido = conteudo.classList.toggle("hidden");
+            icone.textContent = recolhido ? "chevron_right" : "expand_more";
+        };
+
+        window.excluirFolhaID = async function(idTecnicaId, numero) {
+            if (!confirm(`Excluir a ID ${numero}? Esta ação remove também seus desenhos e o PDF salvo, e não pode ser desfeita.`)) return;
+            try {
+                await API.excluirFolhaID(activeComponentId, idTecnicaId);
+                await carregarEquipamento();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+            } catch (err) {
+                alert(err.message);
+            }
+        };
+
+        function escapeHtml(valor) {
+            return String(valor ?? "").replace(/[&<>'"]/g, caractere => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[caractere]));
+        }
+
+        function formatarTamanho(bytes) {
+            if (!Number.isFinite(Number(bytes))) return "N/A";
+            const valor = Number(bytes);
+            return valor >= 1024 * 1024
+                ? `${(valor / (1024 * 1024)).toFixed(1)} MB`
+                : `${(valor / 1024).toFixed(0)} KB`;
+        }
+
+        window.abrirImportacaoFolhaID = function(revisaoDeId = null, revisaoDeNumero = null) {
+            const componente = componentesCache.find(c => c.id === activeComponentId);
+            folhaIDRevisaoAlvo = revisaoDeId ? { id: revisaoDeId, numero: revisaoDeNumero } : null;
+            document.getElementById("folha-id-componente").innerText = folhaIDRevisaoAlvo
+                ? `Importando revisão da ID ${revisaoDeNumero} · Componente: ${componente?.nome || activeComponentId}`
+                : `Componente selecionado: ${componente?.nome || activeComponentId}`;
+            document.getElementById("folha-id-arquivo").value = "";
+            document.getElementById("folha-id-previa").classList.add("hidden");
+            document.getElementById("folha-id-estado").classList.add("hidden");
+            document.getElementById("btn-confirmar-folha-id").disabled = true;
+            folhaIDArquivo = null;
+            folhaIDDados = null;
+            document.getElementById("folha-id-substituicao").classList.add("hidden");
+            document.getElementById("folha-id-substituicao").classList.remove("flex");
+            document.getElementById("folha-id-confirma-substituicao").checked = false;
+            document.getElementById("modal-folha-id").classList.remove("hidden");
+        };
+
+        function fecharImportacaoFolhaID() {
+            document.getElementById("modal-folha-id").classList.add("hidden");
+        }
+
+        function mostrarEstadoFolhaID(mensagem, erro = false) {
+            const estado = document.getElementById("folha-id-estado");
+            estado.className = `text-xs rounded-xl p-3 ${erro ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-800'}`;
+            estado.innerText = mensagem;
+            estado.classList.remove("hidden");
+        }
+
+        function renderPreviaFolhaID(dados) {
+            const camposEditaveis = [
+                ["numero_id", "ID", dados.numero_id, true],
+                ["op", "OP", dados.op || "", false],
+                ["rv", "RV", dados.rv || "", false],
+                ["cliente", "Cliente", dados.cliente || "", false],
+                ["equipamento", "Equipamento", dados.equipamento || "", false],
+                ["componente", "Componente", dados.componente || "", false]
+            ];
+            const camposHtml = camposEditaveis.map(([campo, rotulo, valor, obrigatorio]) => `
+                <label class="bg-slate-50 border border-slate-100 rounded-lg p-2 min-w-0">
+                    <span class="block text-[9px] font-bold uppercase text-slate-400 mb-1">${rotulo}${obrigatorio ? " *" : ""}</span>
+                    <input data-folha-campo="${campo}" value="${escapeHtml(valor)}" ${obrigatorio ? "required" : ""}
+                        class="w-full min-w-0 bg-white border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-700">
+                </label>
+            `).join("");
+            const informativosHtml = [
+                ["Páginas", dados.paginas], ["Desenhos", dados.desenhos.length]
+            ].map(([rotulo, valor]) => `
+                <div class="bg-slate-50 border border-slate-100 rounded-lg p-2 min-w-0">
+                    <span class="block text-[9px] font-bold uppercase text-slate-400">${rotulo}</span>
+                    <span class="block text-xs font-bold text-slate-700">${escapeHtml(valor)}</span>
                 </div>
             `).join("");
+            document.getElementById("folha-id-resumo").innerHTML = camposHtml + informativosHtml;
+            const avisos = document.getElementById("folha-id-avisos");
+            if (dados.avisos?.length) {
+                avisos.innerHTML = dados.avisos.map(aviso => `<p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">${escapeHtml(aviso)}</p>`).join("");
+                avisos.classList.remove("hidden");
+            } else avisos.classList.add("hidden");
+            const caixaSubstituicao = document.getElementById("folha-id-substituicao");
+            const numeroDiferente = folhaIDRevisaoAlvo && dados.numero_id !== folhaIDRevisaoAlvo.numero;
+            caixaSubstituicao.classList.toggle("hidden", !numeroDiferente);
+            caixaSubstituicao.classList.toggle("flex", Boolean(numeroDiferente));
+            document.getElementById("folha-id-confirma-substituicao").checked = false;
+            if (numeroDiferente) {
+                document.getElementById("folha-id-substituicao-texto").innerHTML = `Confirmo que a ID <strong>${escapeHtml(dados.numero_id)}</strong> substitui a ID <strong>${escapeHtml(folhaIDRevisaoAlvo.numero)}</strong> que estava em revisão.`;
+            }
+            const inputNumeroID = document.querySelector('[data-folha-campo="numero_id"]');
+            inputNumeroID?.addEventListener("input", atualizarConfirmacaoSubstituicao);
+            document.getElementById("folha-id-desenhos").innerHTML = dados.desenhos.map((desenho, indice) => `
+                <div class="grid grid-cols-[150px_1fr_90px] gap-2 p-2 folha-id-linha" data-indice="${indice}">
+                    <input value="${escapeHtml(desenho.codigo)}${desenho.revisao ? ' ' + escapeHtml(desenho.revisao) : ''}" class="folha-codigo min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] font-mono font-bold">
+                    <textarea rows="1" class="folha-descricao min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] resize-y" title="Arraste para aumentar">${escapeHtml(desenho.descricao || '')}</textarea>
+                    <div class="flex items-center gap-1"><input type="number" min="1" value="${desenho.quantidade}" class="folha-quantidade w-12 px-1 py-1 border border-slate-200 rounded text-[11px] text-right"><span class="text-[10px] text-slate-500">${escapeHtml(desenho.unidade || '')}</span></div>
+                </div>`).join("");
+            document.getElementById("folha-id-previa").classList.remove("hidden");
+            document.getElementById("btn-confirmar-folha-id").disabled = false;
         }
+
+        function atualizarConfirmacaoSubstituicao() {
+            const numeroAtual = document.querySelector('[data-folha-campo="numero_id"]')?.value.trim() || "";
+            const numeroDiferente = Boolean(folhaIDRevisaoAlvo && numeroAtual !== folhaIDRevisaoAlvo.numero);
+            const caixa = document.getElementById("folha-id-substituicao");
+            caixa.classList.toggle("hidden", !numeroDiferente);
+            caixa.classList.toggle("flex", numeroDiferente);
+            document.getElementById("folha-id-confirma-substituicao").checked = false;
+            if (numeroDiferente) {
+                document.getElementById("folha-id-substituicao-texto").innerHTML = `Confirmo que a ID <strong>${escapeHtml(numeroAtual || "Não informada")}</strong> substitui a ID <strong>${escapeHtml(folhaIDRevisaoAlvo.numero)}</strong> que estava em revisão.`;
+            }
+        }
+
+        document.getElementById("btn-analisar-folha-id").addEventListener("click", async () => {
+            const arquivos = [...document.getElementById("folha-id-arquivo").files]
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+            if (!arquivos.length) return mostrarEstadoFolhaID("Selecione um PDF ou uma ou mais imagens JPG/JPEG.", true);
+            const possuiPDF = arquivos.some(arquivo => arquivo.type === "application/pdf" || arquivo.name.toLowerCase().endsWith(".pdf"));
+            if (possuiPDF && arquivos.length > 1) return mostrarEstadoFolhaID("Selecione apenas um PDF, ou somente imagens JPG/JPEG.", true);
+            folhaIDArquivo = arquivos;
+            document.getElementById("btn-confirmar-folha-id").disabled = true;
+            mostrarEstadoFolhaID("Analisando todas as páginas do documento...");
+            try {
+                folhaIDDados = await API.analisarFolhaID(activeComponentId, arquivos);
+                const modoLeitura = folhaIDDados.modo_leitura?.startsWith("ocr") ? " por OCR (documento digitalizado)" : "";
+                mostrarEstadoFolhaID(`${folhaIDDados.desenhos.length} desenho(s) encontrado(s)${modoLeitura}. Confira cuidadosamente os dados antes de confirmar.`);
+                renderPreviaFolhaID(folhaIDDados);
+            } catch (err) {
+                folhaIDDados = null;
+                document.getElementById("folha-id-previa").classList.add("hidden");
+                mostrarEstadoFolhaID(err.message, true);
+            }
+        });
+
+        document.getElementById("btn-confirmar-folha-id").addEventListener("click", async () => {
+            if (!folhaIDArquivo || !folhaIDDados) return;
+            document.querySelectorAll("[data-folha-campo]").forEach(input => {
+                folhaIDDados[input.dataset.folhaCampo] = input.value.trim() || null;
+            });
+            if (!folhaIDDados.numero_id) {
+                return mostrarEstadoFolhaID("Informe o número da ID antes de continuar.", true);
+            }
+            const numeroDiferente = folhaIDRevisaoAlvo && folhaIDDados.numero_id !== folhaIDRevisaoAlvo.numero;
+            if (numeroDiferente && !document.getElementById("folha-id-confirma-substituicao").checked) {
+                return mostrarEstadoFolhaID("Confirme a substituição da ID antes de continuar.", true);
+            }
+            folhaIDDados.revisao_de_id = folhaIDRevisaoAlvo?.id || null;
+            folhaIDDados.confirma_substituicao = Boolean(numeroDiferente);
+            folhaIDDados.desenhos = [...document.querySelectorAll(".folha-id-linha")].map(linha => {
+                const original = folhaIDDados.desenhos[Number(linha.dataset.indice)];
+                const codigoCompleto = linha.querySelector(".folha-codigo").value.trim();
+                const revisaoEncontrada = codigoCompleto.match(/\s+(R\d+)$/i);
+                return {
+                    ...original,
+                    codigo: revisaoEncontrada ? codigoCompleto.slice(0, revisaoEncontrada.index).trim() : codigoCompleto,
+                    revisao: revisaoEncontrada ? revisaoEncontrada[1].toUpperCase() : original.revisao,
+                    descricao: linha.querySelector(".folha-descricao").value.trim(),
+                    quantidade: Number(linha.querySelector(".folha-quantidade").value) || 1
+                };
+            });
+            const botao = document.getElementById("btn-confirmar-folha-id");
+            botao.disabled = true;
+            botao.innerText = "Importando...";
+            try {
+                await API.confirmarFolhaID(activeComponentId, folhaIDArquivo, folhaIDDados);
+                fecharImportacaoFolhaID();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+            } catch (err) {
+                mostrarEstadoFolhaID(err.message, true);
+                botao.disabled = false;
+            } finally {
+                botao.innerText = "Confirmar importação";
+            }
+        });
+
+        window.retornarIDRevisao = async function(idTecnicaId, numero) {
+            const motivo = prompt(`Informe o motivo para retornar a ID ${numero} à Engenharia:`);
+            if (!motivo?.trim()) return;
+            try {
+                await API.retornarFolhaIDRevisao(activeComponentId, idTecnicaId, motivo.trim());
+                await carregarEquipamento();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+            } catch (err) { alert(err.message); }
+        };
+
+        window.abrirPDFFolhaID = async function(idTecnicaId) {
+            try {
+                const blob = await API.baixarFolhaID(activeComponentId, idTecnicaId);
+                const url = URL.createObjectURL(blob);
+                window.open(url, "_blank");
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) { alert(err.message); }
+        };
+
+        document.getElementById("btn-fechar-folha-id").addEventListener("click", fecharImportacaoFolhaID);
+        document.getElementById("btn-cancelar-folha-id").addEventListener("click", fecharImportacaoFolhaID);
 
         // Fechar Gaveta
         document.getElementById("drawer-btn-fechar").addEventListener("click", () => {

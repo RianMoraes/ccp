@@ -350,7 +350,7 @@
         });
 
         if (filtroPreset === "atraso") {
-            equipamentos = equipamentos.filter(eq => eq.criticidade === "critico" || eq.criticidade === "alerta");
+            equipamentos = equipamentos.filter(eq => ["pendencia_pos_carregamento", "critico", "alerta"].includes(eq.criticidade));
         } else if (filtroPreset === "bloqueio") {
             equipamentos = equipamentos.filter(eq => eq.possui_bloqueio);
         } else if (filtroPreset === "entrega-semana") {
@@ -378,6 +378,9 @@
             if (eq.criticidade === "critico") {
                 bordaColor = "border-l-red-500";
                 badgeColor = "bg-red-500 text-white";
+            } else if (eq.criticidade === "pendencia_pos_carregamento") {
+                bordaColor = "border-l-purple-600";
+                badgeColor = "bg-purple-600 text-white";
             } else if (eq.criticidade === "alerta") {
                 bordaColor = "border-l-amber-500";
                 badgeColor = "bg-amber-500 text-slate-900";
@@ -389,7 +392,7 @@
                     <div class="flex-1 min-w-[300px]" onclick="toggleExpand('${eq.id}')">
                         <div class="flex items-center gap-3">
                             <h2 class="font-bold text-slate-800 text-base">${eq.nome}</h2>
-                            <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase ${badgeColor}">${eq.criticidade.toUpperCase()}</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase ${badgeColor}">${eq.criticidade === "pendencia_pos_carregamento" ? "PENDÊNCIA PÓS-CARREGAMENTO" : eq.criticidade.toUpperCase()}</span>
                         </div>
                         <div class="flex items-center gap-4 mt-1">
                             <span class="text-xs text-slate-500 font-medium">Cliente: <span class="text-slate-700 font-semibold">${eq.cliente_nome}</span></span>
@@ -649,12 +652,15 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                 return;
             }
             container.innerHTML = idsList.map(id => `
-                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                    <div class="flex justify-between text-xs font-bold text-slate-700">
-                        <span>ID Técnica: ${id.numero}</span>
+                <div class="bg-slate-50 border border-slate-100 rounded-xl">
+                    <div class="flex justify-between items-start gap-2 p-3 text-xs font-bold text-slate-700">
+                        <button onclick="alternarIDTecnica('${id.id}')" class="flex items-center gap-1.5 text-left hover:text-blue-900" title="Expandir ou recolher ID">
+                            <span id="id-tecnica-icone-${id.id}" class="material-symbols-outlined text-[17px] text-slate-500">chevron_right</span>
+                            <span>ID Técnica: ${id.numero}</span>
+                        </button>
                         <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
                     </div>
-                    <div class="space-y-1">
+                    <div id="id-tecnica-conteudo-${id.id}" class="hidden px-3 pb-3 space-y-1">
                         ${id.desenhos.map(d => `
                             <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
                                 <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
@@ -666,6 +672,14 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                 </div>
             `).join("");
         }
+
+        window.alternarIDTecnica = function(idTecnicaId) {
+            const conteudo = document.getElementById(`id-tecnica-conteudo-${idTecnicaId}`);
+            const icone = document.getElementById(`id-tecnica-icone-${idTecnicaId}`);
+            if (!conteudo || !icone) return;
+            const recolhido = conteudo.classList.toggle("hidden");
+            icone.textContent = recolhido ? "chevron_right" : "expand_more";
+        };
 
         document.getElementById("drawer-btn-fechar").addEventListener("click", () => {
             const drawer = document.getElementById("drawer-componente");

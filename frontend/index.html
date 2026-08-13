@@ -217,8 +217,8 @@ if (prioridades && prioridades.length > 0) {
                 const feed = document.getElementById("feed-equipamentos");
                 
                 // Ordenar por criticidade (critico -> alerta -> normal)
-                const criticidadeOrdem = { "critico": 1, "alerta": 2, "normal": 3 };
-                equipamentos.sort((a, b) => criticidadeOrdem[a.criticidade] - criticidadeOrdem[b.criticidade]);
+                const criticidadeOrdem = { "pendencia_pos_carregamento": 1, "critico": 2, "alerta": 3, "normal": 4, "carregado": 5 };
+                equipamentos.sort((a, b) => (criticidadeOrdem[a.criticidade] || 99) - (criticidadeOrdem[b.criticidade] || 99));
 
                 if (equipamentos.length === 0) {
                     feed.innerHTML = `<p class="text-sm text-slate-500 italic p-6 bg-white rounded-xl border border-slate-200">Nenhum equipamento em andamento.</p>`;
@@ -229,6 +229,9 @@ if (prioridades && prioridades.length > 0) {
                         if (eq.criticidade === "critico") {
                             bordaColor = "bg-red-500";
                             textoColor = "text-red-600 bg-red-50";
+                        } else if (eq.criticidade === "pendencia_pos_carregamento") {
+                            bordaColor = "bg-purple-600";
+                            textoColor = "text-purple-700 bg-purple-50";
                         } else if (eq.criticidade === "alerta") {
                             bordaColor = "bg-amber-500";
                             textoColor = "text-amber-600 bg-amber-50";
@@ -259,7 +262,7 @@ if (prioridades && prioridades.length > 0) {
                                 <div class="flex flex-col gap-1 border-l border-slate-100 pl-4">
                                     <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Situação</span>
                                     <span class="px-2.5 py-1 rounded-lg text-xs font-bold w-fit uppercase ${textoColor}">
-                                        ${eq.criticidade.toUpperCase()}
+                                        ${eq.criticidade === "pendencia_pos_carregamento" ? "PENDÊNCIA PÓS-CARREGAMENTO" : eq.criticidade.toUpperCase()}
                                     </span>
                                 </div>
                             </div>
@@ -282,6 +285,8 @@ if (prioridades && prioridades.length > 0) {
                         let statusBadge = `<span class="text-[9px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-bold uppercase border border-green-200">No Prazo</span>`;
                         if (eq.criticidade === "critico") {
                             statusBadge = `<span class="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase border border-red-200">CRÍTICO</span>`;
+                        } else if (eq.criticidade === "pendencia_pos_carregamento") {
+                            statusBadge = `<span class="text-[9px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase border border-purple-200">PENDÊNCIA PÓS-CARREGAMENTO</span>`;
                         } else if (eq.criticidade === "alerta") {
                             statusBadge = `<span class="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-bold uppercase border border-amber-200">Atrasado</span>`;
                         }

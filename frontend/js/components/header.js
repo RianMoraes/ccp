@@ -15,7 +15,7 @@ export function renderHeader(title = "Centro de Controle da Produção") {
                 <!-- Busca Global -->
                 <div class="relative w-96 group">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] group-focus-within:text-slate-800 transition-colors">search</span>
-                    <input id="input-busca-global" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-12 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-900 focus:ring-1 focus:ring-blue-900 transition-all shadow-sm" placeholder="Buscar por equipamento, componente, cliente ou ordem..." type="text">
+                    <input id="input-busca-global" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-12 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-900 focus:ring-1 focus:ring-blue-900 transition-all shadow-sm" placeholder="Buscar equipamento, componente, cliente, OP ou ID..." type="text">
                     <div id="busca-resultados-modal" class="hidden absolute left-0 right-0 top-12 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 max-h-96 overflow-y-auto">
                         <!-- Inserção dos resultados via JS -->
                     </div>
@@ -24,7 +24,7 @@ export function renderHeader(title = "Centro de Controle da Produção") {
                 <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
                     <div class="text-right">
                         <p class="font-label-bold text-label-bold text-slate-800">${user.nome}</p>
-                        <p class="text-[10px] text-slate-500">${user.cargo || "Analista PCP"}</p>
+                        <p class="text-[10px] text-slate-500">${user.cargo || ({ admin: "Administrador", pcp: "PCP", gerente: "Gerente", visualizador: "Visualizador" }[user.perfil] || "Usuário")}</p>
                     </div>
                 </div>
             </div>
@@ -56,11 +56,11 @@ export function renderHeader(title = "Centro de Controle da Produção") {
 
             try {
                 const res = await API.buscarGlobal(termo);
-                const { clientes, equipamentos, componentes } = res.resultados;
+                const { clientes, equipamentos, componentes, ids_tecnicas = [] } = res.resultados;
 
                 let html = "";
                 
-                if (!clientes.length && !equipamentos.length && !componentes.length) {
+                if (!clientes.length && !equipamentos.length && !componentes.length && !ids_tecnicas.length) {
                     html = `<p class="text-xs text-slate-500 italic">Nenhum resultado encontrado.</p>`;
                 } else {
                     if (clientes.length) {
@@ -79,6 +79,19 @@ export function renderHeader(title = "Centro de Controle da Produção") {
                         html += `<div>
                             <h4 class="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-1">Componentes</h4>
                             ${componentes.map(comp => `<div class="py-1 border-b border-slate-200 text-xs"><a href="equipamento-detalhe.html?id=${comp.equipamento_id}&componente_id=${comp.id}" class="hover:text-slate-800 font-medium">${comp.nome}</a> <span class="text-[10px] text-slate-500">em ${comp.equipamento_nome}</span></div>`).join("")}
+                        </div>`;
+                    }
+                    if (ids_tecnicas.length) {
+                        const statusID = { liberada: "Liberada", em_revisao: "Em revisão", revisada: "Versão anterior", substituida: "Substituída", cancelada: "Cancelada" };
+                        html += `<div class="mt-3">
+                            <h4 class="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-1">Desenhos & IDs</h4>
+                            ${ids_tecnicas.map(id => `<div class="py-1.5 border-b border-slate-200 text-xs">
+                                <a href="equipamento-detalhe.html?id=${encodeURIComponent(id.equipamento_id)}&componente_id=${encodeURIComponent(id.componente_id)}&aba=desenhos&id_tecnica_id=${encodeURIComponent(id.id)}" class="block hover:text-blue-900">
+                                    <span class="font-bold font-mono">ID ${id.numero}</span>
+                                    <span class="text-[10px] text-slate-500"> · V${id.versao || 1} · ${statusID[id.status] || id.status}</span>
+                                    <span class="block text-[10px] text-slate-500 truncate">${id.componente_nome} em ${id.equipamento_nome}</span>
+                                </a>
+                            </div>`).join("")}
                         </div>`;
                     }
                 }

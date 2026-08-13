@@ -154,8 +154,10 @@
                 <div class="space-y-1">
                     <label for="form-usuario-perfil" class="text-[10px] font-bold text-slate-500 uppercase">Perfil de Acesso</label>
                     <select id="form-usuario-perfil" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
-                        <option value="pcp">Analista PCP (Total)</option>
-                        <option value="visualizador">Diretoria / Consulta</option>
+                        <option value="visualizador">Visualizador — somente consulta</option>
+                        <option value="pcp">PCP — operação de produção e IDs</option>
+                        <option value="gerente">Gerente — somente consulta</option>
+                        <option value="admin">Administrador — acesso total e configurações</option>
                     </select>
                 </div>
                 <div class="space-y-1">
@@ -204,6 +206,13 @@
         import { API } from "./js/api.js";
         import { renderSidebar } from "./js/components/sidebar.js";
         import { renderHeader } from "./js/components/header.js";
+
+        const usuarioLogado = JSON.parse(localStorage.getItem("ccp_user") || "null");
+        if (!usuarioLogado || usuarioLogado.perfil !== "admin") {
+            alert("Esta área é exclusiva para administradores.");
+            window.location.href = "index.html";
+            throw new Error("Acesso a configurações não autorizado");
+        }
 
         renderSidebar("settings");
         renderHeader("Painel de Configurações");

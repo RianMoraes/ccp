@@ -238,6 +238,54 @@ export const API = {
         });
         return handleResponse(response);
     },
+
+    // Folhas de ID em PDF
+    async analisarFolhaID(componenteId, arquivos) {
+        const formData = new FormData();
+        arquivos.forEach(arquivo => formData.append("arquivos", arquivo));
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/analisar`, {
+            method: "POST",
+            headers: getHeaders(null),
+            body: formData
+        });
+        return handleResponse(response);
+    },
+
+    async confirmarFolhaID(componenteId, arquivos, dados) {
+        const formData = new FormData();
+        arquivos.forEach(arquivo => formData.append("arquivos", arquivo));
+        formData.append("dados_json", JSON.stringify(dados));
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/confirmar`, {
+            method: "POST",
+            headers: getHeaders(null),
+            body: formData
+        });
+        return handleResponse(response);
+    },
+
+    async retornarFolhaIDRevisao(componenteId, idTecnicaId, motivo) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}/retornar-revisao`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify({ motivo })
+        });
+        return handleResponse(response);
+    },
+
+    async excluirFolhaID(componenteId, idTecnicaId) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}`, {
+            method: "DELETE",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    async baixarFolhaID(componenteId, idTecnicaId) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}/arquivo`, {
+            headers: getHeaders(null)
+        });
+        return handleResponse(response);
+    },
     
     // Busca Global
     async buscarGlobal(q) {

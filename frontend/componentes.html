@@ -396,12 +396,15 @@
                 return;
             }
             container.innerHTML = idsList.map(id => `
-                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                    <div class="flex justify-between text-xs font-bold text-slate-700">
-                        <span>ID Técnica: ${id.numero}</span>
+                <div class="bg-slate-50 border border-slate-100 rounded-xl">
+                    <div class="flex justify-between items-start gap-2 p-3 text-xs font-bold text-slate-700">
+                        <button onclick="alternarIDTecnica('${id.id}')" class="flex items-center gap-1.5 text-left hover:text-blue-900" title="Expandir ou recolher ID">
+                            <span id="id-tecnica-icone-${id.id}" class="material-symbols-outlined text-[17px] text-slate-500">chevron_right</span>
+                            <span>ID Técnica: ${id.numero}</span>
+                        </button>
                         <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
                     </div>
-                    <div class="space-y-1">
+                    <div id="id-tecnica-conteudo-${id.id}" class="hidden px-3 pb-3 space-y-1">
                         ${id.desenhos.map(d => `
                             <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
                                 <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
@@ -413,6 +416,14 @@
                 </div>
             `).join("");
         }
+
+        window.alternarIDTecnica = function(idTecnicaId) {
+            const conteudo = document.getElementById(`id-tecnica-conteudo-${idTecnicaId}`);
+            const icone = document.getElementById(`id-tecnica-icone-${idTecnicaId}`);
+            if (!conteudo || !icone) return;
+            const recolhido = conteudo.classList.toggle("hidden");
+            icone.textContent = recolhido ? "chevron_right" : "expand_more";
+        };
 
         function renderPendencias(pendenciasList) {
             const container = document.getElementById("tab-content-pendencias");

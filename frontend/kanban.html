@@ -23,7 +23,7 @@
 
             <div class="flex justify-between items-center">
                 <h2 class="text-sm font-bold text-slate-700 uppercase">Fluxo Produtivo Kanban</h2>
-                <div class="text-[10px] text-slate-500 font-semibold italic">Arrastar e soltar (drag & drop) para movimentar etapas</div>
+                <div id="kanban-instrucao" class="text-[10px] text-slate-500 font-semibold italic">Arrastar e soltar (drag & drop) para movimentar etapas</div>
             </div>
 
             <!-- Colunas montadas dinamicamente via JS a partir das etapas reais em uso -->
@@ -40,6 +40,10 @@
 
         renderSidebar("kanban");
         renderHeader("Fluxo Kanban");
+        const podeOperar = window.CCP_ACESSO?.podeOperar === true;
+        if (!podeOperar) {
+            document.getElementById("kanban-instrucao").innerText = "Modo consulta — movimentação de etapas desativada";
+        }
 
         window.excluirComponente = async function(id) {
             if (!confirm("Tem certeza que deseja excluir este componente?")) return;
@@ -133,15 +137,17 @@
                 `;
 
                 const dropzone = col.querySelector(".kanban-col");
-                dropzone.addEventListener("dragover", (e) => {
-                    e.preventDefault();
-                    dropzone.classList.add("drag-over");
-                });
-                dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
-                dropzone.addEventListener("drop", (e) => {
-                    dropzone.classList.remove("drag-over");
-                    onDrop(e, chave);
-                });
+                if (podeOperar) {
+                    dropzone.addEventListener("dragover", (e) => {
+                        e.preventDefault();
+                        dropzone.classList.add("drag-over");
+                    });
+                    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
+                    dropzone.addEventListener("drop", (e) => {
+                        dropzone.classList.remove("drag-over");
+                        onDrop(e, chave);
+                    });
+                }
 
                 lista.forEach(c => {
                     let cardBorder = "border-l-blue-900";
@@ -151,8 +157,10 @@
                     const card = document.createElement("div");
                     card.id = `card-${c.id}`;
                     card.className = `bg-white border-l-4 ${cardBorder} border-t border-r border-b border-slate-200 rounded-xl p-3 shadow-xs space-y-2 cursor-grab active:cursor-grabbing hover:border-slate-300 transition-colors`;
-                    card.draggable = true;
-                    card.addEventListener("dragstart", (e) => e.dataTransfer.setData("text", c.id));
+                    card.draggable = podeOperar;
+                    if (podeOperar) {
+                        card.addEventListener("dragstart", (e) => e.dataTransfer.setData("text", c.id));
+                    }
                     card.addEventListener("click", () => {
                         window.location.href = `equipamentos.html?id=${c.equipamento_id}&componente_id=${c.id}`;
                     });
