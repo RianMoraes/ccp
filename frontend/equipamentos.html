@@ -379,7 +379,10 @@
         for (const eq of equipamentos) {
             let bordaColor = "border-l-green-500";
             let badgeColor = "bg-green-500 text-white";
-            if (eq.criticidade === "critico") {
+            if (eq.criticidade === "carregado") {
+                bordaColor = "border-l-blue-700";
+                badgeColor = "bg-blue-700 text-white";
+            } else if (eq.criticidade === "critico") {
                 bordaColor = "border-l-red-500";
                 badgeColor = "bg-red-500 text-white";
             } else if (eq.criticidade === "pendencia_pos_carregamento") {

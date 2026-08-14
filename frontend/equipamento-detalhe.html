@@ -423,7 +423,8 @@
 
             const critBadge = document.getElementById("eq-criticidade-badge");
             let critColor = "bg-green-500 text-white";
-            if (eq.criticidade === "critico") critColor = "bg-red-500 text-white";
+            if (eq.criticidade === "carregado") critColor = "bg-blue-700 text-white";
+            else if (eq.criticidade === "critico") critColor = "bg-red-500 text-white";
             else if (eq.criticidade === "pendencia_pos_carregamento") critColor = "bg-purple-600 text-white";
             else if (eq.criticidade === "alerta") critColor = "bg-amber-500 text-slate-900";
             critBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded uppercase " + critColor;
@@ -432,7 +433,14 @@
                 : (eq.criticidade || "").toUpperCase();
 
             const statusBadge = document.getElementById("eq-status-badge");
-            statusBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded uppercase border bg-slate-50 text-slate-600 border-slate-200";
+            const statusCores = {
+                em_producao: "bg-green-50 text-green-700 border-green-200",
+                concluido: "bg-green-100 text-green-800 border-green-300",
+                carregado: "bg-blue-700 text-white border-blue-700",
+                carregado_com_pendencia: "bg-purple-100 text-purple-800 border-purple-300",
+                cancelado: "bg-slate-100 text-slate-600 border-slate-200"
+            };
+            statusBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded uppercase border " + (statusCores[eq.status] || statusCores.em_producao);
             statusBadge.innerText = (eq.status || "").replaceAll("_", " ").toUpperCase();
 
             document.getElementById("eq-progress-bar").style.width = `${eq.percentual_geral}%`;

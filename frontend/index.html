@@ -226,7 +226,10 @@ if (prioridades && prioridades.length > 0) {
                     feed.innerHTML = equipamentos.map(eq => {
                         let bordaColor = "bg-green-500";
                         let textoColor = "text-green-600 bg-green-50";
-                        if (eq.criticidade === "critico") {
+                        if (eq.criticidade === "carregado") {
+                            bordaColor = "bg-blue-700";
+                            textoColor = "text-blue-700 bg-blue-50";
+                        } else if (eq.criticidade === "critico") {
                             bordaColor = "bg-red-500";
                             textoColor = "text-red-600 bg-red-50";
                         } else if (eq.criticidade === "pendencia_pos_carregamento") {
@@ -283,7 +286,9 @@ if (prioridades && prioridades.length > 0) {
                 } else {
                     entregasContainer.innerHTML = entregasFiltradas.map(eq => {
                         let statusBadge = `<span class="text-[9px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-bold uppercase border border-green-200">No Prazo</span>`;
-                        if (eq.criticidade === "critico") {
+                        if (eq.criticidade === "carregado") {
+                            statusBadge = `<span class="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase border border-blue-200">CARREGADO</span>`;
+                        } else if (eq.criticidade === "critico") {
                             statusBadge = `<span class="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase border border-red-200">CRÍTICO</span>`;
                         } else if (eq.criticidade === "pendencia_pos_carregamento") {
                             statusBadge = `<span class="text-[9px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase border border-purple-200">PENDÊNCIA PÓS-CARREGAMENTO</span>`;
