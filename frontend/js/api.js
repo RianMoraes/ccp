@@ -272,6 +272,23 @@ export const API = {
         return handleResponse(response);
     },
 
+    async retornarDesenhoRevisao(componenteId, idTecnicaId, desenhoId, motivo) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}/desenhos/${desenhoId}/retornar-revisao`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify({ motivo })
+        });
+        return handleResponse(response);
+    },
+
+    async cancelarRevisaoDesenho(componenteId, idTecnicaId, desenhoId) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}/desenhos/${desenhoId}/cancelar-revisao`, {
+            method: "POST",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
     async excluirFolhaID(componenteId, idTecnicaId) {
         const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}`, {
             method: "DELETE",
