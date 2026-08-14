@@ -51,6 +51,11 @@ class StatusIDTecnicaEnum(str, Enum):
     SUBSTITUIDA = "substituida"
     CANCELADA = "cancelada"
 
+class StatusRevisaoDesenhoEnum(str, Enum):
+    EM_REVISAO = "em_revisao"
+    RESOLVIDA = "resolvida"
+    CANCELADA = "cancelada"
+
 # --- MODELOS ---
 
 class Cliente(SQLModel, table=True):
@@ -223,6 +228,23 @@ class Desenho(SQLModel, table=True):
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     
     id_tecnica: IDTecnica = Relationship(back_populates="desenhos")
+
+
+class RevisaoDesenho(SQLModel, table=True):
+    __tablename__ = "revisoes_desenhos"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    componente_id: str = Field(foreign_key="componentes.id", index=True)
+    desenho_origem_id: str = Field(foreign_key="desenhos.id", index=True)
+    desenho_substituto_id: Optional[str] = Field(default=None, foreign_key="desenhos.id", index=True)
+    status: StatusRevisaoDesenhoEnum = Field(default=StatusRevisaoDesenhoEnum.EM_REVISAO, index=True)
+    motivo: str = Field()
+    retornada_por: str = Field()
+    retornada_em: datetime = Field(default_factory=datetime.utcnow)
+    resolvida_por: Optional[str] = Field(default=None)
+    resolvida_em: Optional[datetime] = Field(default=None)
+    cancelada_por: Optional[str] = Field(default=None)
+    cancelada_em: Optional[datetime] = Field(default=None)
 
 
 class Pendencia(SQLModel, table=True):
