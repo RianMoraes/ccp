@@ -187,6 +187,10 @@
                     <input id="form-eq-rv" type="text" placeholder="Ex: 00045/25" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
                 </div>
                 <div class="space-y-1">
+                    <label for="form-eq-inicio" class="text-[10px] font-bold text-slate-500 uppercase">Mês de Início Planejado</label>
+                    <input id="form-eq-inicio" type="month" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div class="space-y-1">
                     <label for="form-eq-entrega" class="text-[10px] font-bold text-slate-500 uppercase">Data de Entrega</label>
                     <input id="form-eq-entrega" type="date" required class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
                 </div>
@@ -839,6 +843,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
             const nome = document.getElementById("form-eq-nome").value.trim();
             const op = document.getElementById("form-eq-op").value.trim();
             const rv = document.getElementById("form-eq-rv").value.trim();
+            const mes_inicio = document.getElementById("form-eq-inicio").value;
             const data_entrega = document.getElementById("form-eq-entrega").value;
 
             if (!nomeCliente) {
@@ -873,7 +878,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${localStorage.getItem("ccp_token")}`
                     },
-                    body: JSON.stringify({ cliente_id, nome, op, rv, data_entrega })
+                    body: JSON.stringify({ cliente_id, nome, op, rv, data_inicio: mes_inicio ? `${mes_inicio}-01` : null, data_entrega })
                 });
                 if (!response.ok) throw new Error("Erro ao salvar equipamento");
                 

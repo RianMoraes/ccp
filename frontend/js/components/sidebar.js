@@ -27,6 +27,10 @@ export function renderSidebar(activeMenu = "dashboard") {
                 <span class="material-symbols-outlined">local_shipping</span>
                 <span class="font-body-md text-body-md">Entregas</span>
             </a>
+            <a id="menu-planejamento" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ease-in-out ${activeMenu === 'planejamento' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-500 hover:bg-slate-100'}" href="planejamento.html">
+                <span class="material-symbols-outlined">calendar_month</span>
+                <span class="font-body-md text-body-md">Planejamento</span>
+            </a>
         </nav>
         <div class="p-3 border-t border-slate-200 space-y-1">
             ${podeAdministrar ? `<a id="menu-settings" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ease-in-out ${activeMenu === 'settings' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-500 hover:bg-slate-100'}" href="configuracoes.html">
@@ -80,7 +84,8 @@ function aplicarModoConsulta(podeOperar) {
         "[onclick*='cancelarRevisaoDesenho']",
         "[onclick*='excluirFolhaID']", "[onclick*='deletarCliente']",
         "[onclick*='deletarUsuario']", "[onclick*='deletarModelo']",
-        "[onclick*='removerEtapaInput']", "[onchange*='alterarPrazo']"
+        "[onclick*='removerEtapaInput']", "[onchange*='alterarPrazo']",
+        "[onchange*='alterarInicio']"
     ].join(",");
 
     const ocultarAcoes = raiz => {

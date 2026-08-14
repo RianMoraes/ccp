@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planejamento - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-4 border-b border-slate-200">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-700 uppercase">Planejamento de Início</h2>
+                    <p class="text-xs text-slate-400 font-medium mt-1">Visão mensal do início planejado dos equipamentos</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-todos-meses" class="px-3 py-2 bg-blue-950 text-white rounded-xl text-xs font-bold shadow-sm">Todos os meses</button>
+                    <div class="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <button id="btn-mes-anterior" class="p-2 text-slate-500 hover:bg-slate-100" title="Mês anterior"><span class="material-symbols-outlined text-[19px]">chevron_left</span></button>
+                        <input id="filtro-mes" type="month" class="border-0 text-xs font-bold text-slate-700 focus:ring-0">
+                        <button id="btn-proximo-mes" class="p-2 text-slate-500 hover:bg-slate-100" title="Próximo mês"><span class="material-symbols-outlined text-[19px]">chevron_right</span></button>
+                    </div>
+                    <input id="busca-planejamento" type="search" placeholder="Buscar equipamento, OP ou cliente" class="w-72 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white shadow-sm">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-slate-400">Mês selecionado</span>
+                    <p id="kpi-mes" class="text-lg font-bold text-blue-950 mt-1">—</p>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-slate-400">Inícios planejados</span>
+                    <p id="kpi-planejados" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                </div>
+                <div class="bg-amber-50 rounded-xl border border-amber-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-amber-700">Sem mês definido</span>
+                    <p id="kpi-sem-planejamento" class="text-2xl font-bold text-amber-900 mt-1">0</p>
+                </div>
+            </div>
+
+            <section class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 id="titulo-mes" class="text-xs font-bold uppercase text-slate-600">Equipamentos planejados</h3>
+                    <span id="total-mes" class="text-[10px] font-bold text-slate-400"></span>
+                </div>
+                <div id="lista-planejados" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            </section>
+
+            <section class="space-y-3 pt-3 border-t border-slate-200">
+                <div>
+                    <h3 class="text-xs font-bold uppercase text-amber-800">Aguardando planejamento</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Equipamentos que ainda não possuem mês de início definido</p>
+                </div>
+                <div id="lista-sem-planejamento" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("planejamento");
+        renderHeader("Planejamento de Início");
+
+        const hoje = new Date();
+        const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+        const params = new URLSearchParams(window.location.search);
+        const filtroMes = document.getElementById("filtro-mes");
+        filtroMes.value = /^\d{4}-\d{2}$/.test(params.get("mes") || "") ? params.get("mes") : mesAtual;
+        let visualizarTodos = !/^\d{4}-\d{2}$/.test(params.get("mes") || "");
+        let equipamentosCache = [];
+
+        function escapeHtml(valor) {
+            return String(valor ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
+        }
+
+        function nomeMes(mes) {
+            if (!mes) return "Não definido";
+            const [ano, numero] = mes.split("-").map(Number);
+            return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" })
+                .format(new Date(ano, numero - 1, 1)).replace(/^./, letra => letra.toUpperCase());
+        }
+
+        function formatarData(data) {
+            if (!data) return "N/A";
+            const [ano, mes, dia] = data.slice(0, 10).split("-");
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        function statusTexto(status) {
+            return ({ em_producao: "Em produção", concluido: "Concluído", carregado: "Carregado", carregado_com_pendencia: "Carregado com pendência" })[status] || String(status || "").replaceAll("_", " ");
+        }
+
+        function cartaoEquipamento(eq, semPlanejamento = false) {
+            const podeOperar = window.CCP_ACESSO?.podeOperar;
+            const seletor = podeOperar ? `
+                <label class="block" onclick="event.stopPropagation()">
+                    <span class="block text-[9px] font-bold uppercase text-slate-400 mb-1">${semPlanejamento ? "Definir início" : "Alterar início"}</span>
+                    <input type="month" value="${eq.data_inicio ? eq.data_inicio.slice(0, 7) : ''}" onchange="alterarInicioPlanejamento('${eq.id}', this.value)" class="w-full px-2 py-1 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700">
+                </label>` : "";
+            return `
+                <article onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'" class="bg-white rounded-xl border ${semPlanejamento ? 'border-amber-200' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow space-y-3">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <h4 class="font-bold text-sm text-slate-800 leading-tight">${escapeHtml(eq.nome)}</h4>
+                            <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(eq.cliente_nome || "Cliente não informado")}</p>
+                        </div>
+                        <span class="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-50 text-blue-900">${escapeHtml(statusTexto(eq.status))}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
+                        <div><span class="block text-slate-400">OP</span><strong class="text-slate-700">${escapeHtml(eq.op || "N/A")}</strong></div>
+                        <div><span class="block text-slate-400">RV</span><strong class="text-slate-700">${escapeHtml(eq.rv || "N/A")}</strong></div>
+                        <div><span class="block text-slate-400">Entrega</span><strong class="text-slate-700">${formatarData(eq.data_entrega)}</strong></div>
+                    </div>
+                    ${seletor}
+                </article>`;
+        }
+
+        function renderizar() {
+            const mes = filtroMes.value;
+            const busca = document.getElementById("busca-planejamento").value.trim().toLowerCase();
+            const elegiveis = equipamentosCache.filter(eq => eq.status !== "cancelado");
+            const corresponde = eq => !busca || [eq.nome, eq.op, eq.rv, eq.cliente_nome].some(valor => String(valor || "").toLowerCase().includes(busca));
+            const planejados = elegiveis.filter(eq => eq.data_inicio && (visualizarTodos || eq.data_inicio.slice(0, 7) === mes) && corresponde(eq));
+            const semPlanejamento = elegiveis.filter(eq => !eq.data_inicio && corresponde(eq));
+
+            document.getElementById("kpi-mes").innerText = visualizarTodos ? "Todos os meses" : nomeMes(mes);
+            document.getElementById("kpi-planejados").innerText = planejados.length;
+            document.getElementById("kpi-sem-planejamento").innerText = elegiveis.filter(eq => !eq.data_inicio).length;
+            document.getElementById("titulo-mes").innerText = visualizarTodos ? "Todos os inícios planejados" : `Início em ${nomeMes(mes)}`;
+            document.getElementById("total-mes").innerText = `${planejados.length} equipamento(s)`;
+
+            const btnTodos = document.getElementById("btn-todos-meses");
+            btnTodos.className = visualizarTodos
+                ? "px-3 py-2 bg-blue-950 text-white rounded-xl text-xs font-bold shadow-sm"
+                : "px-3 py-2 bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold shadow-sm";
+
+            if (visualizarTodos && planejados.length) {
+                const grupos = {};
+                planejados.forEach(eq => {
+                    const chave = eq.data_inicio.slice(0, 7);
+                    (grupos[chave] ||= []).push(eq);
+                });
+                document.getElementById("lista-planejados").className = "space-y-5";
+                document.getElementById("lista-planejados").innerHTML = Object.keys(grupos).sort().map(chave => `
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3">
+                            <h4 class="text-xs font-bold text-blue-950">${nomeMes(chave)}</h4>
+                            <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[9px] font-bold">${grupos[chave].length} equipamento(s)</span>
+                            <div class="h-px bg-slate-200 flex-1"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            ${grupos[chave].sort((a, b) => (a.data_entrega || "9999").localeCompare(b.data_entrega || "9999")).map(eq => cartaoEquipamento(eq)).join("")}
+                        </div>
+                    </div>`).join("");
+            } else {
+                document.getElementById("lista-planejados").className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4";
+                document.getElementById("lista-planejados").innerHTML = planejados.length
+                    ? planejados.sort((a, b) => (a.data_entrega || "9999").localeCompare(b.data_entrega || "9999")).map(eq => cartaoEquipamento(eq)).join("")
+                    : `<p class="col-span-full p-6 text-center text-xs italic text-slate-400 bg-white border border-slate-200 rounded-xl">Nenhum equipamento planejado para ${visualizarTodos ? "os meses disponíveis" : "este mês"}.</p>`;
+            }
+            document.getElementById("lista-sem-planejamento").innerHTML = semPlanejamento.length
+                ? semPlanejamento.map(eq => cartaoEquipamento(eq, true)).join("")
+                : `<p class="col-span-full p-6 text-center text-xs italic text-slate-400 bg-white border border-slate-200 rounded-xl">Todos os equipamentos possuem mês de início planejado.</p>`;
+        }
+
+        window.alterarInicioPlanejamento = async function(id, novoMes) {
+            if (!novoMes) return;
+            try {
+                await API.atualizarInicioEquipamento(id, novoMes);
+                const equipamento = equipamentosCache.find(eq => eq.id === id);
+                if (equipamento) equipamento.data_inicio = `${novoMes}-01`;
+                renderizar();
+            } catch (err) {
+                alert("Erro ao atualizar o mês de início: " + err.message);
+                await carregarPlanejamento();
+            }
+        };
+
+        function deslocarMes(delta) {
+            const [ano, mes] = filtroMes.value.split("-").map(Number);
+            const data = new Date(ano, mes - 1 + delta, 1);
+            filtroMes.value = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
+            visualizarTodos = false;
+            renderizar();
+        }
+
+        async function carregarPlanejamento() {
+            try {
+                equipamentosCache = await API.getEquipamentos();
+                renderizar();
+            } catch (err) {
+                document.getElementById("lista-planejados").innerHTML = `<p class="col-span-full p-6 text-center text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        filtroMes.addEventListener("change", () => { visualizarTodos = false; renderizar(); });
+        document.getElementById("btn-todos-meses").addEventListener("click", () => { visualizarTodos = true; renderizar(); });
+        document.getElementById("busca-planejamento").addEventListener("input", renderizar);
+        document.getElementById("btn-mes-anterior").addEventListener("click", () => deslocarMes(-1));
+        document.getElementById("btn-proximo-mes").addEventListener("click", () => deslocarMes(1));
+        carregarPlanejamento();
+    </script>
+</body>
+</html>

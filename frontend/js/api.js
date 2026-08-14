@@ -139,6 +139,15 @@ export const API = {
         return handleResponse(response);
     },
 
+    async atualizarInicioEquipamento(id, novoMes) {
+        const novaData = `${novoMes}-01`;
+        const response = await fetch(`${API_BASE_URL}/equipamentos/${id}/inicio?nova_data=${novaData}`, {
+            method: "PATCH",
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
+
     // Componentes
     async getComponentes(params = {}) {
         const urlParams = new URLSearchParams(params).toString();

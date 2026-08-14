@@ -346,6 +346,16 @@
             }
         };
 
+        window.alterarInicioEquipamentoHeader = async function(id, novoMes) {
+            if (!novoMes) return;
+            try {
+                await API.atualizarInicioEquipamento(id, novoMes);
+                await carregarEquipamento();
+            } catch (err) {
+                alert("Erro ao atualizar o mês de início: " + err.message);
+            }
+        };
+
         window.alterarPrazoComponenteCard = async function(id, novaData) {
             if (!novaData) return;
             try {
@@ -393,7 +403,11 @@
             document.getElementById("eq-cliente").innerText = eq.cliente_nome || "N/A";
             document.getElementById("eq-op").innerText = eq.op || "N/A";
             document.getElementById("eq-rv").innerText = eq.rv || "N/A";
-            document.getElementById("eq-inicio").innerText = eq.data_inicio ? new Date(eq.data_inicio).toLocaleDateString('pt-BR') : "N/A";
+            const inicioEl = document.getElementById("eq-inicio");
+            const mesInicio = eq.data_inicio ? eq.data_inicio.slice(0, 7) : "";
+            inicioEl.innerHTML = window.CCP_ACESSO?.podeOperar
+                ? `<input type="month" value="${mesInicio}" onchange="alterarInicioEquipamentoHeader('${eq.id}', this.value)" class="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700">`
+                : (mesInicio ? `${mesInicio.slice(5, 7)}/${mesInicio.slice(0, 4)}` : "N/A");
 
             const entregaEl = document.getElementById("eq-entrega");
             entregaEl.innerHTML = `
