@@ -156,7 +156,7 @@ def _extrair_campos_por_posicao(imagem):
     }
 
 
-def _extrair_desenhos_ocr(textos_por_pagina):
+def _extrair_desenhos_ocr(textos_por_pagina, modelo_item_r_cop=False):
     desenhos = []
     vistos = set()
     codigo_rx = re.compile(r"(?<![A-Z0-9])([A-Z1|]{1,5}[I0-9]?-?[A-Z0-9]*[-.]\s*\d{2,5}[.]\d{2,5})(?:\s*(R[I1\d]+))?\b", re.I)
@@ -200,7 +200,16 @@ def _extrair_desenhos_ocr(textos_por_pagina):
 
             tokens = depois.split()
             copias = 1
-            if tokens and re.fullmatch(r"\d+", tokens[0]):
+            if modelo_item_r_cop:
+                # Layout Tecnall: depois do codigo existem duas colunas numericas
+                # distintas: R (revisao) e COP. (numero de copias).
+                if tokens and re.fullmatch(r"\d+", tokens[0]):
+                    if not revisao:
+                        revisao = f"R{int(tokens[0])}"
+                    tokens.pop(0)
+                if tokens and re.fullmatch(r"\d+\.??", tokens[0]):
+                    copias = int(tokens.pop(0).rstrip("."))
+            elif tokens and re.fullmatch(r"\d+", tokens[0]):
                 copias = int(tokens.pop(0))
 
             quantidade = 1
@@ -244,12 +253,206 @@ def _extrair_desenhos_ocr(textos_por_pagina):
     return desenhos
 
 
+def _campos_modelo_item_r_cop(texto):
+    """Extrai o cabecalho do modelo Tecnall com rotulos e valores na mesma linha."""
+    def entre(inicio, fim=None):
+        final = rf"\s+{fim}\s*:" if fim else r"\s*$"
+        encontrado = re.search(rf"(?im)^\s*{inicio}\s*:\s*(.+?){final}", texto)
+        return _limpar(encontrado.group(1)) if encontrado else None
+
+    def numero(campo):
+        encontrado = re.search(rf"(?im)\b{campo}\s*:\s*([0-9O]+[/|][0-9O]+)", texto)
+        return encontrado.group(1).replace("O", "0").replace("|", "/") if encontrado else None
+
+    data_liberacao = None
+    data_match = re.search(r"(?im)^\s*LIBERADO\s+POR\s*:.*?\s+DATA\s*:\s*(\d{2}/\d{2}/\d{4})(?:\s+(\d{2}:\d{2}))?", texto)
+    if data_match:
+        bruto = data_match.group(1) + ((" " + data_match.group(2)) if data_match.group(2) else "")
+        formato = "%d/%m/%Y %H:%M" if data_match.group(2) else "%d/%m/%Y"
+        try:
+            data_liberacao = datetime.strptime(bruto, formato).isoformat()
+        except ValueError:
+            pass
+
+    local = entre("LOCAL", "RV")
+    equipamento = entre("EQUIPAMENTO")
+    if local:
+        local = re.sub(r"(?i)PADR[ÃAĂ]O", "Padrão", local)
+    if equipamento:
+        equipamento = re.sub(r"(?i)INTERLIGAGOES", "INTERLIGAÇÕES", equipamento)
+        equipamento = re.sub(r"\s+\d+\W+$", "", equipamento).strip()
+
+    return {
+        "numero_id": numero("[I1]D"),
+        "op": numero("OP"),
+        "rv": numero("RV"),
+        "cliente": entre("CLIENTE", "OP"),
+        "local": local,
+        "equipamento": equipamento,
+        "componente": entre("COMPONENTE", "[I1]D"),
+        "liberado_por": entre(r"LIBERADO\s+POR", "DATA"),
+        "data_liberacao": data_liberacao,
+    }
+
+
+def _extrair_modelo_item_r_cop_por_posicao(imagens):
+    """Separa R, copias, descricao e quantidade pelas colunas fisicas da tabela."""
+    desenhos = []
+    codigo_rx = re.compile(r"([A-Z][A-Z0-9]{0,5}-\d{3,5}\.\d{3,5})", re.I)
+    for pagina, imagem in enumerate(imagens, 1):
+        # PSM 4 preserva melhor as colunas R/COP/descricao quando existem
+        # vistos manuscritos ao lado da tabela. PSM 6 e usado apenas na QTD,
+        # pois consegue enxergar melhor os algarismos da ultima coluna.
+        dados = pytesseract.image_to_data(
+            imagem, lang="por+eng", config="--psm 4", output_type=pytesseract.Output.DICT
+        )
+        palavras = []
+        for indice, texto in enumerate(dados["text"]):
+            texto = _limpar(texto)
+            if not texto:
+                continue
+            palavras.append({
+                "texto": texto,
+                "normalizado": _normalizar(texto).strip(". :"),
+                "x": int(dados["left"][indice]),
+                "y": int(dados["top"][indice]),
+                "w": int(dados["width"][indice]),
+                "h": int(dados["height"][indice]),
+            })
+
+        cabecalhos = {}
+        itens_cabecalho = [p for p in palavras if p["normalizado"] == "ITEM"]
+        if itens_cabecalho:
+            item_cabecalho = min(itens_cabecalho, key=lambda p: p["y"])
+            cabecalhos["ITEM"] = item_cabecalho
+            for nome in ("DESENHO", "R", "COP", "DESCRICAO", "QTD"):
+                candidatos = [p for p in palavras if p["normalizado"] == nome]
+                if candidatos:
+                    cabecalhos[nome] = min(
+                        candidatos, key=lambda p: abs(p["y"] - item_cabecalho["y"])
+                    )
+        if not all(nome in cabecalhos for nome in ("ITEM", "DESENHO", "R", "COP", "DESCRICAO", "QTD")):
+            continue
+
+        y_cabecalho = max(cabecalhos[nome]["y"] for nome in cabecalhos)
+        centro = lambda p: p["x"] + p["w"] / 2
+        x_r = centro(cabecalhos["R"])
+        x_cop = centro(cabecalhos["COP"])
+        x_qtd = centro(cabecalhos["QTD"])
+        limite_codigo = (centro(cabecalhos["DESENHO"]) + x_r) / 2
+        limite_r_cop = (x_r + x_cop) / 2
+        limite_cop_descricao = x_cop + max(24, (x_cop - x_r) * 0.45)
+        limite_descricao_qtd = x_qtd - max(45, imagem.width * 0.025)
+
+        codigos = []
+        for palavra in palavras:
+            if palavra["y"] <= y_cabecalho + 15:
+                continue
+            encontrado_codigo = codigo_rx.search(palavra["texto"])
+            if encontrado_codigo:
+                codigo_palavra = dict(palavra)
+                codigo_palavra["codigo_detectado"] = encontrado_codigo.group(1)
+                codigos.append(codigo_palavra)
+        codigos.sort(key=lambda palavra: palavra["y"])
+        centros_y = [palavra["y"] + palavra["h"] / 2 for palavra in codigos]
+
+        dados_qtd = pytesseract.image_to_data(
+            imagem, lang="por+eng", config="--psm 6", output_type=pytesseract.Output.DICT
+        )
+        palavras_qtd = []
+        for indice, texto in enumerate(dados_qtd["text"]):
+            texto = _limpar(texto)
+            if not texto:
+                continue
+            palavras_qtd.append({
+                "texto": texto,
+                "x": int(dados_qtd["left"][indice]),
+                "y": int(dados_qtd["top"][indice]),
+                "w": int(dados_qtd["width"][indice]),
+                "h": int(dados_qtd["height"][indice]),
+            })
+
+        for posicao, (codigo_palavra, y_linha) in enumerate(zip(codigos, centros_y), 1):
+            passo = float(np.median(np.diff(centros_y))) if len(centros_y) > 1 else 40
+            linha = [
+                palavra for palavra in palavras
+                if palavra["y"] > y_cabecalho
+                and abs((palavra["y"] + palavra["h"] / 2) - y_linha) <= passo * 0.48
+                and min(
+                    range(len(centros_y)),
+                    key=lambda i: abs((palavra["y"] + palavra["h"] / 2) - centros_y[i]),
+                ) == posicao - 1
+            ]
+
+            def texto_faixa(x1, x2):
+                selecionadas = [p for p in linha if x1 <= centro(p) < x2]
+                return _limpar(" ".join(p["texto"] for p in sorted(selecionadas, key=lambda p: p["x"])))
+
+            revisao_bruta = texto_faixa(limite_codigo, limite_r_cop)
+            copias_bruta = texto_faixa(limite_r_cop, limite_cop_descricao)
+            descricao = texto_faixa(limite_cop_descricao, limite_descricao_qtd).strip(" |~+-.,")
+            descricao = re.sub(r"(?i)\bQUADR\s+3\s+4\s+POL\b", "QUADR 3/4 POL", descricao)
+            quantidade_tokens = [
+                p for p in palavras_qtd
+                if p["x"] + p["w"] / 2 >= limite_descricao_qtd
+                and abs((p["y"] + p["h"] / 2) - y_linha) <= passo * 0.60
+                and min(
+                    range(len(centros_y)),
+                    key=lambda i: abs((p["y"] + p["h"] / 2) - centros_y[i]),
+                ) == posicao - 1
+            ]
+            quantidade_bruta = _limpar(" ".join(
+                p["texto"] for p in sorted(quantidade_tokens, key=lambda p: p["x"])
+            ))
+
+            revisao_numero = re.search(r"\d+", revisao_bruta)
+            revisao = f"R{int(revisao_numero.group())}" if revisao_numero else None
+            copias_numero = re.search(r"\d+", copias_bruta)
+            copias = int(copias_numero.group()) if copias_numero else 1
+            # Marcas de caneta ao lado da QTD frequentemente viram sufixos como
+            # 17, 1F ou 4c. O primeiro algarismo continua sendo o valor impresso.
+            quantidade_numero = re.search(r"\d", quantidade_bruta)
+            if not quantidade_numero:
+                recorte = imagem.crop((
+                    round(x_qtd - 20), round(y_linha - passo * 0.45),
+                    round(x_qtd + 65), round(y_linha + passo * 0.70),
+                )).resize((425, max(round(passo * 5.75), 100)), Image.Resampling.LANCZOS)
+                pixels = np.asarray(recorte)
+                _, binaria = cv2.threshold(pixels, 200, 255, cv2.THRESH_BINARY)
+                leitura = _limpar(pytesseract.image_to_string(
+                    binaria, lang="eng",
+                    config="--psm 10 -c tessedit_char_whitelist=0123456789",
+                ))
+                quantidade_numero = re.search(r"\d", leitura)
+            quantidade = int(quantidade_numero.group()) if quantidade_numero else 1
+
+            if not descricao:
+                continue
+            codigo = codigo_palavra["codigo_detectado"].upper().replace("|", "I")
+            prefixo, separador, restante = codigo.partition("-")
+            if separador and prefixo in {"T1", "TL", "T", "1I"}:
+                codigo = f"TI-{restante}"
+            desenhos.append({
+                "codigo": codigo,
+                "revisao": revisao,
+                "descricao": descricao,
+                "copias": max(copias, 1),
+                "quantidade": max(quantidade, 1),
+                "unidade": None,
+                "quantidade_original": str(max(quantidade, 1)),
+                "item": posicao,
+                "pagina_origem": pagina,
+            })
+    return desenhos
+
+
 def _analisar_com_ocr(documento=None, imagens_originais=None):
     _configurar_tesseract()
     idiomas = "por+eng"
     textos_psm3 = []
     textos_psm4 = []
     textos_psm6 = []
+    imagens_ocr = []
     campos_posicionais = {}
     fontes = imagens_originais if imagens_originais is not None else documento
     for numero, fonte in enumerate(fontes, 1):
@@ -258,21 +461,34 @@ def _analisar_com_ocr(documento=None, imagens_originais=None):
             imagem = ImageOps.autocontrast(imagem)
         else:
             imagem = _preparar_imagem_ocr(fonte)
+        imagens_ocr.append(imagem)
         if numero == 1:
             campos_posicionais = _extrair_campos_por_posicao(imagem)
         textos_psm3.append((numero, pytesseract.image_to_string(imagem, lang=idiomas, config="--psm 3")))
         textos_psm4.append((numero, pytesseract.image_to_string(imagem, lang=idiomas, config="--psm 4")))
         textos_psm6.append((numero, pytesseract.image_to_string(imagem, lang=idiomas, config="--psm 6")))
 
+    texto_psm6 = "\n".join(texto for _, texto in textos_psm6)
+    normalizado_psm6 = _normalizar(texto_psm6)
+    modelo_item_r_cop = all(
+        marcador in normalizado_psm6
+        for marcador in ("ITEM", "DESENHO", "COP", "DESCRICAO", "QTD")
+    )
     desenhos_psm3 = _extrair_desenhos_ocr(textos_psm3)
     desenhos_psm4 = _extrair_desenhos_ocr(textos_psm4)
-    desenhos_psm6 = _extrair_desenhos_ocr(textos_psm6)
+    desenhos_psm6 = _extrair_desenhos_ocr(textos_psm6, modelo_item_r_cop=modelo_item_r_cop)
+    desenhos_posicionais = _extrair_modelo_item_r_cop_por_posicao(imagens_ocr) if modelo_item_r_cop else []
     candidatos_ocr = [
         (desenhos_psm3, textos_psm3),
         (desenhos_psm4, textos_psm4),
         (desenhos_psm6, textos_psm6),
     ]
-    desenhos, textos_por_pagina = max(candidatos_ocr, key=lambda candidato: len(candidato[0]))
+    if modelo_item_r_cop and desenhos_posicionais:
+        desenhos, textos_por_pagina = desenhos_posicionais, textos_psm6
+    elif modelo_item_r_cop and desenhos_psm6:
+        desenhos, textos_por_pagina = desenhos_psm6, textos_psm6
+    else:
+        desenhos, textos_por_pagina = max(candidatos_ocr, key=lambda candidato: len(candidato[0]))
     texto_completo = "\n".join(texto for _, texto in textos_psm3 + textos_psm4 + textos_psm6)
     if not desenhos:
         raise FolhaIDInvalida(
@@ -303,15 +519,16 @@ def _analisar_com_ocr(documento=None, imagens_originais=None):
         if not rv and len(candidatos) > 1:
             rv = candidatos[1]
 
-    cliente = campos_posicionais.get("cliente") or _campo_texto_ocr(texto_completo, "CLIENTE")
-    local = campos_posicionais.get("local") or _campo_texto_ocr(texto_completo, "LOCAL")
-    equipamento = campos_posicionais.get("equipamento") or _campo_texto_ocr(texto_completo, "EQUIPAMENTO")
-    componente = campos_posicionais.get("componente") or _campo_texto_ocr(texto_completo, "COMPONENTE")
-    liberado_por = campos_posicionais.get("liberado_por") or _campo_texto_ocr(texto_completo, "LIBERADO POR")
-    data_liberacao = None
+    campos_modelo = _campos_modelo_item_r_cop("\n".join(texto for _, texto in textos_psm3)) if modelo_item_r_cop else {}
+    cliente = campos_modelo.get("cliente") or campos_posicionais.get("cliente") or _campo_texto_ocr(texto_completo, "CLIENTE")
+    local = campos_modelo.get("local") or campos_posicionais.get("local") or _campo_texto_ocr(texto_completo, "LOCAL")
+    equipamento = campos_modelo.get("equipamento") or campos_posicionais.get("equipamento") or _campo_texto_ocr(texto_completo, "EQUIPAMENTO")
+    componente = campos_modelo.get("componente") or campos_posicionais.get("componente") or _campo_texto_ocr(texto_completo, "COMPONENTE")
+    liberado_por = campos_modelo.get("liberado_por") or campos_posicionais.get("liberado_por") or _campo_texto_ocr(texto_completo, "LIBERADO POR")
+    data_liberacao = campos_modelo.get("data_liberacao")
     texto_data = campos_posicionais.get("data_liberacao_bruta") or texto_completo
     data_match = re.search(r"(?i)(\d{2}/\d{2}/\d{4})(?:\s+(\d{2}:\d{2}))?", texto_data)
-    if data_match:
+    if not data_liberacao and data_match:
         bruto = data_match.group(1) + ((" " + data_match.group(2)) if data_match.group(2) else "")
         formato = "%d/%m/%Y %H:%M" if data_match.group(2) else "%d/%m/%Y"
         try:
@@ -320,12 +537,12 @@ def _analisar_com_ocr(documento=None, imagens_originais=None):
             pass
 
     return {
-        "modelo_documento": "ocr_digitalizado",
+        "modelo_documento": "ocr_item_r_cop" if modelo_item_r_cop else "ocr_digitalizado",
         "modo_leitura": "ocr",
         "paginas": len(fontes),
-        "numero_id": numero_id,
-        "op": op,
-        "rv": rv,
+        "numero_id": campos_modelo.get("numero_id") or numero_id,
+        "op": campos_modelo.get("op") or op,
+        "rv": campos_modelo.get("rv") or rv,
         "cliente": cliente,
         "local": local,
         "equipamento": equipamento,
