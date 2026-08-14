@@ -179,6 +179,7 @@
     <span class="font-bold text-blue-950">${c.percentual}%</span>
 </div>
 <div class="text-[10px] text-slate-400 truncate">${c.cliente_nome || ''}</div>
+${c.desenhos_em_revisao ? `<div class="flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 rounded px-1.5 py-1"><span class="material-symbols-outlined text-[13px]">warning</span>${c.desenhos_em_revisao} desenho(s) em revisão</div>` : ''}
                     `;
                     dropzone.appendChild(card);
                 });

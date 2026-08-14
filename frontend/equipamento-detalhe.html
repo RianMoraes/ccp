@@ -327,6 +327,7 @@
         let folhaIDArquivo = null;
         let folhaIDDados = null;
         let folhaIDRevisaoAlvo = null;
+        let folhaIDRevisaoDesenhoAlvo = null;
 
         if (!equipamentoId) {
             document.getElementById("eq-nome").innerText = "Equipamento não informado.";
@@ -479,6 +480,7 @@
                     <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${sv.cls}">${sv.label}</span>
                         ${c.status === "bloqueado" ? '<span class="material-symbols-outlined text-red-500 text-[16px] animate-pulse">block</span>' : ''}
+                        ${c.desenhos_em_revisao ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800" title="Aviso não bloqueante">${c.desenhos_em_revisao} desenho(s) em revisão</span>` : ''}
                     </div>
                     <div class="text-[11px] text-slate-500">
                         Etapa Atual: <span class="font-bold text-slate-700">${c.etapa_atual_nome || 'N/A'}</span>
@@ -691,6 +693,7 @@
             const idsOrdenadas = [...idsList].sort((a, b) => (b.versao || 1) - (a.versao || 1));
             container.innerHTML = botaoImportar + idsOrdenadas.map(id => {
                 const status = id.status || "liberada";
+                const totalDesenhosRevisao = (id.desenhos || []).filter(d => d.revisao_individual).length;
                 const statusTexto = { liberada: "Liberada", em_revisao: "Em revisão", revisada: "Versão anterior", substituida: "Substituída", cancelada: "Cancelada" }[status] || status;
                 const statusClasse = status === "em_revisao" ? "bg-red-100 text-red-700" : ['revisada', 'substituida'].includes(status) ? "bg-slate-200 text-slate-600" : "bg-green-100 text-green-700";
                 return `
@@ -702,6 +705,7 @@
                                 <span class="text-xs font-bold text-slate-800">ID ${escapeHtml(id.numero)}</span>
                                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${statusClasse}">${statusTexto}</span>
                                 <span class="text-[9px] text-slate-400 font-bold">V${id.versao || 1}</span>
+                                ${totalDesenhosRevisao ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">${totalDesenhosRevisao} desenho(s) em revisão</span>` : ''}
                             </button>
                             <p class="text-[10px] text-slate-400 mt-0.5">OP ${escapeHtml(id.op || 'N/A')} · RV ${escapeHtml(id.rv || 'N/A')}</p>
                             ${id.arquivo_compactado && id.tamanho_original ? `<p class="text-[9px] text-emerald-700 mt-0.5">PDF otimizado · ${formatarTamanho(id.tamanho_original)} → ${formatarTamanho(id.tamanho_armazenado)}</p>` : ''}
@@ -718,14 +722,20 @@
                     ${id.substituida_por_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substituída pela ID <strong>${escapeHtml(id.substituida_por_numero)}</strong></p>` : ''}
                     ${id.substitui_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substitui a ID <strong>${escapeHtml(id.substitui_numero)}</strong></p>` : ''}
                     <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                        <div class="grid grid-cols-[120px_1fr_65px] gap-2 px-2 py-1.5 bg-slate-100 text-[9px] font-bold uppercase text-slate-500">
-                            <span>Desenho</span><span>Descrição</span><span class="text-right">Qtd.</span>
+                        <div class="grid grid-cols-[120px_1fr_65px_76px] gap-2 px-2 py-1.5 bg-slate-100 text-[9px] font-bold uppercase text-slate-500">
+                            <span>Desenho</span><span>Descrição</span><span class="text-right">Qtd.</span><span class="text-right">Ações</span>
                         </div>
                         ${(id.desenhos || []).map(d => `
-                            <div class="grid grid-cols-[120px_1fr_65px] gap-2 items-start px-2 py-1.5 border-t border-slate-100 text-[10px]">
+                            <div class="grid grid-cols-[120px_1fr_65px_76px] gap-2 items-start px-2 py-1.5 border-t ${d.revisao_individual ? 'border-amber-200 bg-amber-50' : 'border-slate-100'} text-[10px]">
                                 <span class="font-bold font-mono text-slate-800 break-all">${escapeHtml(d.codigo)}${d.revisao ? ' ' + escapeHtml(d.revisao) : ''}</span>
                                 <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${escapeHtml(d.descricao || '')}</button>
                                 <span class="font-bold text-slate-700 text-right">${d.quantidade}${d.unidade ? ' ' + escapeHtml(d.unidade) : ''}</span>
+                                <span class="flex justify-end gap-1">
+                                    ${d.revisao_individual
+                                        ? `<button onclick="abrirImportacaoRevisaoDesenho('${d.revisao_individual.id}', '${id.id}', '${escapeHtml(id.numero)}', '${escapeHtml(d.codigo)}')" title="Importar revisão do desenho" class="text-purple-700 hover:bg-purple-100 rounded"><span class="material-symbols-outlined text-[16px]">upload_file</span></button><button onclick="cancelarRevisaoDesenho('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Cancelar retorno" class="text-slate-500 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[16px]">undo</span></button>`
+                                        : status === 'liberada' ? `<button onclick="retornarDesenhoRevisao('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Retornar somente este desenho para revisão" class="text-amber-700 hover:bg-amber-100 rounded"><span class="material-symbols-outlined text-[16px]">assignment_return</span></button>` : ''}
+                                </span>
+                                ${d.revisao_individual ? `<span class="col-span-4 text-[10px] text-amber-800"><strong>Em revisão:</strong> ${escapeHtml(d.revisao_individual.motivo)} · ${escapeHtml(d.revisao_individual.retornada_por)}</span>` : ''}
                             </div>`).join("")}
                     </div>
                     </div>
@@ -774,10 +784,13 @@
                 : `${(valor / 1024).toFixed(0)} KB`;
         }
 
-        window.abrirImportacaoFolhaID = function(revisaoDeId = null, revisaoDeNumero = null) {
+        window.abrirImportacaoFolhaID = function(revisaoDeId = null, revisaoDeNumero = null, manterRevisaoDesenho = false) {
             const componente = componentesCache.find(c => c.id === activeComponentId);
+            if (!manterRevisaoDesenho) folhaIDRevisaoDesenhoAlvo = null;
             folhaIDRevisaoAlvo = revisaoDeId ? { id: revisaoDeId, numero: revisaoDeNumero } : null;
-            document.getElementById("folha-id-componente").innerText = folhaIDRevisaoAlvo
+            document.getElementById("folha-id-componente").innerText = folhaIDRevisaoDesenhoAlvo
+                ? `Importando revisão do desenho ${folhaIDRevisaoDesenhoAlvo.codigo} · ID ${revisaoDeNumero}`
+                : folhaIDRevisaoAlvo
                 ? `Importando revisão da ID ${revisaoDeNumero} · Componente: ${componente?.nome || activeComponentId}`
                 : `Componente selecionado: ${componente?.nome || activeComponentId}`;
             document.getElementById("folha-id-arquivo").value = "";
@@ -794,6 +807,7 @@
 
         function fecharImportacaoFolhaID() {
             document.getElementById("modal-folha-id").classList.add("hidden");
+            folhaIDRevisaoDesenhoAlvo = null;
         }
 
         function mostrarEstadoFolhaID(mensagem, erro = false) {
@@ -845,6 +859,7 @@
             inputNumeroID?.addEventListener("input", atualizarConfirmacaoSubstituicao);
             document.getElementById("folha-id-desenhos").innerHTML = dados.desenhos.map((desenho, indice) => `
                 <div class="grid grid-cols-[150px_1fr_90px] gap-2 p-2 folha-id-linha" data-indice="${indice}">
+                    ${folhaIDRevisaoDesenhoAlvo ? `<label class="col-span-3 flex items-center gap-2 px-2 py-1 rounded ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'bg-green-50 text-green-800' : 'bg-slate-50 text-slate-600'} text-[10px] font-bold cursor-pointer"><input type="radio" name="desenho-substituto" value="${indice}" ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'checked' : ''}> Usar este desenho como revisão de ${escapeHtml(folhaIDRevisaoDesenhoAlvo.codigo)}</label>` : ''}
                     <input value="${escapeHtml(desenho.codigo)}${desenho.revisao ? ' ' + escapeHtml(desenho.revisao) : ''}" class="folha-codigo min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] font-mono font-bold">
                     <textarea rows="1" class="folha-descricao min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] resize-y" title="Arraste para aumentar">${escapeHtml(desenho.descricao || '')}</textarea>
                     <div class="flex items-center gap-1"><input type="number" min="1" value="${desenho.quantidade}" class="folha-quantidade w-12 px-1 py-1 border border-slate-200 rounded text-[11px] text-right"><span class="text-[10px] text-slate-500">${escapeHtml(desenho.unidade || '')}</span></div>
@@ -912,6 +927,17 @@
                     quantidade: Number(linha.querySelector(".folha-quantidade").value) || 1
                 };
             });
+            if (folhaIDRevisaoDesenhoAlvo) {
+                const selecionado = document.querySelector('input[name="desenho-substituto"]:checked');
+                if (!selecionado) return mostrarEstadoFolhaID("Selecione qual desenho recebido resolve a revisão.", true);
+                const indice = Number(selecionado.value);
+                const codigoNovo = folhaIDDados.desenhos[indice]?.codigo || "";
+                const codigoDiferente = codigoNovo.toUpperCase() !== folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase();
+                if (codigoDiferente && !confirm(`Confirmar que o desenho ${codigoNovo} substitui ${folhaIDRevisaoDesenhoAlvo.codigo}?`)) return;
+                folhaIDDados.revisao_desenho_id = folhaIDRevisaoDesenhoAlvo.id;
+                folhaIDDados.desenho_substituto_indice = indice;
+                folhaIDDados.confirma_substituicao_desenho = codigoDiferente;
+            }
             const botao = document.getElementById("btn-confirmar-folha-id");
             botao.disabled = true;
             botao.innerText = "Importando...";
@@ -937,6 +963,32 @@
                 await abrirDrawerComponente(activeComponentId);
                 ativarTab("desenhos");
             } catch (err) { alert(err.message); }
+        };
+
+        window.retornarDesenhoRevisao = async function(idTecnicaId, desenhoId, codigo) {
+            const motivo = prompt(`Informe o motivo para retornar somente o desenho ${codigo} à Engenharia:`);
+            if (!motivo?.trim()) return;
+            try {
+                await API.retornarDesenhoRevisao(activeComponentId, idTecnicaId, desenhoId, motivo.trim());
+                await carregarEquipamento();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+            } catch (err) { alert(err.message); }
+        };
+
+        window.cancelarRevisaoDesenho = async function(idTecnicaId, desenhoId, codigo) {
+            if (!confirm(`Cancelar o retorno para revisão do desenho ${codigo}?`)) return;
+            try {
+                await API.cancelarRevisaoDesenho(activeComponentId, idTecnicaId, desenhoId);
+                await carregarEquipamento();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+            } catch (err) { alert(err.message); }
+        };
+
+        window.abrirImportacaoRevisaoDesenho = function(revisaoId, idTecnicaId, numeroID, codigo) {
+            folhaIDRevisaoDesenhoAlvo = { id: revisaoId, codigo };
+            abrirImportacaoFolhaID(idTecnicaId, numeroID, true);
         };
 
         window.abrirPDFFolhaID = async function(idTecnicaId) {
