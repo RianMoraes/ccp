@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from sqlmodel import Session, select, SQLModel
 from app.database import get_session
-from app.models import Equipamento, Componente, Usuario, StatusEquipamentoEnum, StatusComponenteEnum, Etapa
+from app.models import (
+    Equipamento, Componente, Usuario, StatusEquipamentoEnum, StatusComponenteEnum,
+    Etapa, RevisaoDesenho, StatusRevisaoDesenhoEnum,
+)
 from app.routes.auth import obter_usuario_atual, exigir_operacao
 from datetime import datetime, date
 
@@ -16,6 +19,12 @@ def _resolver_etapa_atual(session: Session, etapa_atual_id: Optional[str]) -> Op
     if not etapa:
         return None
     return {"id": etapa.id, "nome": etapa.nome, "ordem": etapa.ordem}
+
+def _contar_desenhos_em_revisao(session: Session, componente_id: str) -> int:
+    return len(session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.componente_id == componente_id,
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+    )).all())
 
 # Schemas de input desacoplados do modelo de tabela
 class EquipamentoCreate(SQLModel):
@@ -160,6 +169,7 @@ def obter_equipamento(
                 "responsavel": c.responsavel,
                 "data_prevista": c.data_prevista,
                 "observacoes": c.observacoes,
+                "desenhos_em_revisao": _contar_desenhos_em_revisao(session, c.id),
                 "etapa_atual": _resolver_etapa_atual(session, c.etapa_atual_id)
             }
             for c in componentes

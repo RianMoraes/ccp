@@ -12,8 +12,9 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import (
-    Anexo, Componente, Desenho, Historico, IDTecnica, Pendencia,
-    StatusComponenteEnum, StatusIDTecnicaEnum, StatusPendenciaEnum, Usuario,
+    Anexo, Componente, Desenho, Historico, IDTecnica, Pendencia, RevisaoDesenho,
+    StatusComponenteEnum, StatusIDTecnicaEnum, StatusPendenciaEnum,
+    StatusRevisaoDesenhoEnum, Usuario,
 )
 from app.routes.auth import obter_usuario_atual, exigir_operacao
 from app.routes.componentes import registrar_historico, sincronizar_status_equipamento
@@ -120,13 +121,54 @@ async def confirmar_importacao(
         raise HTTPException(status_code=409, detail="Este mesmo PDF já foi importado para o componente.")
 
     revisao_de_id = str(dados.get("revisao_de_id") or "").strip() or None
+    revisao_desenho_id = str(dados.get("revisao_desenho_id") or "").strip() or None
     confirma_substituicao = dados.get("confirma_substituicao") is True
+    revisao_desenho = None
+    desenho_origem = None
+    indice_substituto = None
+    if revisao_desenho_id:
+        revisao_desenho = session.get(RevisaoDesenho, revisao_desenho_id)
+        if (
+            not revisao_desenho
+            or revisao_desenho.componente_id != componente_id
+            or revisao_desenho.status != StatusRevisaoDesenhoEnum.EM_REVISAO
+        ):
+            raise HTTPException(status_code=409, detail="A revisão individual deste desenho não está mais aberta.")
+        desenho_origem = session.get(Desenho, revisao_desenho.desenho_origem_id)
+        if not desenho_origem:
+            raise HTTPException(status_code=404, detail="O desenho original da revisão não foi encontrado.")
+        try:
+            indice_substituto = int(dados.get("desenho_substituto_indice"))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Selecione qual desenho recebido resolve a revisão.")
+        if indice_substituto < 0 or indice_substituto >= len(desenhos):
+            raise HTTPException(status_code=400, detail="O desenho selecionado para a revisão é inválido.")
+        codigo_substituto = str(desenhos[indice_substituto].get("codigo") or "").strip()
+        if codigo_substituto.casefold() != desenho_origem.codigo.casefold() and dados.get("confirma_substituicao_desenho") is not True:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Confirme que o desenho {codigo_substituto} substitui o desenho {desenho_origem.codigo}.",
+            )
     alvo_revisao = None
+    if revisao_desenho and not revisao_de_id:
+        raise HTTPException(status_code=400, detail="Informe a ID de origem do desenho em revisão.")
     if revisao_de_id:
         alvo_revisao = session.get(IDTecnica, revisao_de_id)
         if not alvo_revisao or alvo_revisao.componente_id != componente_id:
             raise HTTPException(status_code=404, detail="A ID indicada para revisão não foi encontrada neste componente.")
-        if alvo_revisao.status != StatusIDTecnicaEnum.EM_REVISAO:
+        if revisao_desenho and alvo_revisao.status != StatusIDTecnicaEnum.LIBERADA:
+            id_atual = session.exec(
+                select(IDTecnica)
+                .where(
+                    IDTecnica.componente_id == componente_id,
+                    IDTecnica.numero == alvo_revisao.numero,
+                    IDTecnica.status == StatusIDTecnicaEnum.LIBERADA,
+                )
+                .order_by(IDTecnica.versao.desc())
+            ).first()
+            if id_atual:
+                alvo_revisao = id_atual
+        if alvo_revisao.status != StatusIDTecnicaEnum.EM_REVISAO and not revisao_desenho:
             raise HTTPException(status_code=409, detail="A ID indicada não está mais em revisão.")
         if numero != alvo_revisao.numero and not confirma_substituicao:
             raise HTTPException(
@@ -143,7 +185,7 @@ async def confirmar_importacao(
     substituicao = bool(alvo_revisao and numero != alvo_revisao.numero)
     if substituicao and anterior:
         raise HTTPException(status_code=409, detail=f"A ID substituta {numero} já está cadastrada neste componente.")
-    if anterior and anterior.status != StatusIDTecnicaEnum.EM_REVISAO:
+    if anterior and anterior.status != StatusIDTecnicaEnum.EM_REVISAO and not revisao_desenho:
         raise HTTPException(status_code=409, detail="Esta ID já existe. Retorne-a para revisão antes de importar uma nova versão.")
     if anterior and not alvo_revisao:
         raise HTTPException(status_code=409, detail="Use o botão 'Importar revisão' da ID que está em revisão.")
@@ -190,11 +232,12 @@ async def confirmar_importacao(
         session.add(id_tecnica)
         session.flush()
 
+        novos_desenhos = []
         for posicao, desenho in enumerate(desenhos, 1):
             codigo = str(desenho.get("codigo") or "").strip()
             if not codigo:
                 raise HTTPException(status_code=400, detail=f"O desenho da linha {posicao} não possui código.")
-            session.add(Desenho(
+            novo_desenho = Desenho(
                 id_tecnica_id=id_tecnica.id,
                 codigo=codigo,
                 descricao=desenho.get("descricao"),
@@ -205,7 +248,36 @@ async def confirmar_importacao(
                 item=desenho.get("item"),
                 pagina_origem=desenho.get("pagina_origem"),
                 quantidade_original=desenho.get("quantidade_original"),
-            ))
+            )
+            session.add(novo_desenho)
+            session.flush()
+            novos_desenhos.append(novo_desenho)
+
+        if revisao_desenho:
+            desenho_substituto = novos_desenhos[indice_substituto]
+            revisao_desenho.desenho_substituto_id = desenho_substituto.id
+            revisao_desenho.status = StatusRevisaoDesenhoEnum.RESOLVIDA
+            revisao_desenho.resolvida_por = usuario_atual.nome
+            revisao_desenho.resolvida_em = datetime.utcnow()
+            session.add(revisao_desenho)
+
+            desenhos_anteriores = session.exec(
+                select(Desenho).where(Desenho.id_tecnica_id == alvo_revisao.id)
+            ).all()
+            novos_por_codigo = {item.codigo.casefold(): item for item in novos_desenhos}
+            anteriores_por_id = {item.id: item for item in desenhos_anteriores}
+            outras_revisoes = session.exec(
+                select(RevisaoDesenho).where(
+                    RevisaoDesenho.componente_id == componente_id,
+                    RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+                    RevisaoDesenho.id != revisao_desenho.id,
+                )
+            ).all()
+            for outra in outras_revisoes:
+                origem_anterior = anteriores_por_id.get(outra.desenho_origem_id)
+                if origem_anterior and origem_anterior.codigo.casefold() in novos_por_codigo:
+                    outra.desenho_origem_id = novos_por_codigo[origem_anterior.codigo.casefold()].id
+                    session.add(outra)
 
         session.add(Anexo(
             componente_id=componente_id,
@@ -240,6 +312,8 @@ async def confirmar_importacao(
             f"ID '{alvo_revisao.numero}' substituída pela ID '{numero}' versão 1, com {len(desenhos)} desenho(s)."
             if substituicao else f"ID '{numero}' versão {versao} importada com {len(desenhos)} desenho(s)."
         )
+        if revisao_desenho and desenho_origem:
+            detalhe += f" Revisão individual do desenho '{desenho_origem.codigo}' resolvida."
         if compactacao["compactado"]:
             detalhe += f" PDF compactado com redução de {compactacao['percentual_reducao']}%."
         registrar_historico(
@@ -277,6 +351,17 @@ def retornar_para_revisao(
         raise HTTPException(status_code=404, detail="ID técnica não encontrada")
     if id_tecnica.status == StatusIDTecnicaEnum.EM_REVISAO:
         raise HTTPException(status_code=400, detail="Esta ID já está em revisão.")
+    desenhos_id = session.exec(select(Desenho).where(Desenho.id_tecnica_id == id_tecnica_id)).all()
+    ids_desenhos = [desenho.id for desenho in desenhos_id]
+    revisoes_individuais = session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.desenho_origem_id.in_(ids_desenhos),
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+    )).all() if ids_desenhos else []
+    if revisoes_individuais:
+        raise HTTPException(
+            status_code=409,
+            detail="Esta ID possui desenho(s) em revisão individual. Resolva ou cancele esses retornos antes de retornar a ID completa.",
+        )
     motivo = str(dados.get("motivo") or "").strip()
     if not motivo:
         raise HTTPException(status_code=400, detail="Informe o motivo do retorno para revisão.")
@@ -307,6 +392,73 @@ def retornar_para_revisao(
     return {"message": "ID retornada para revisão e componente bloqueado."}
 
 
+@router.post("/{id_tecnica_id}/desenhos/{desenho_id}/retornar-revisao", dependencies=[Depends(exigir_operacao)])
+def retornar_desenho_para_revisao(
+    componente_id: str, id_tecnica_id: str, desenho_id: str, dados: dict,
+    session: Session = Depends(get_session),
+    usuario_atual: Usuario = Depends(obter_usuario_atual),
+):
+    _obter_componente(session, componente_id)
+    id_tecnica = session.get(IDTecnica, id_tecnica_id)
+    desenho = session.get(Desenho, desenho_id)
+    if not id_tecnica or id_tecnica.componente_id != componente_id:
+        raise HTTPException(status_code=404, detail="ID técnica não encontrada.")
+    if not desenho or desenho.id_tecnica_id != id_tecnica_id:
+        raise HTTPException(status_code=404, detail="Desenho não encontrado nesta ID.")
+    if id_tecnica.status != StatusIDTecnicaEnum.LIBERADA:
+        raise HTTPException(status_code=409, detail="Somente desenhos da ID liberada atual podem retornar para revisão.")
+    existente = session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.desenho_origem_id == desenho_id,
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+    )).first()
+    if existente:
+        raise HTTPException(status_code=409, detail="Este desenho já está em revisão.")
+    motivo = str(dados.get("motivo") or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Informe o motivo do retorno para revisão.")
+    revisao = RevisaoDesenho(
+        componente_id=componente_id, desenho_origem_id=desenho_id,
+        motivo=motivo, retornada_por=usuario_atual.nome,
+    )
+    session.add(revisao)
+    registrar_historico(
+        session, componente_id, usuario_atual.nome, "Desenho retornado para revisão",
+        f"Desenho '{desenho.codigo}' da ID '{id_tecnica.numero}': {motivo}. O componente permaneceu em andamento.",
+    )
+    session.commit()
+    session.refresh(revisao)
+    return {"message": "Desenho retornado para revisão sem bloquear o componente.", "id": revisao.id}
+
+
+@router.post("/{id_tecnica_id}/desenhos/{desenho_id}/cancelar-revisao", dependencies=[Depends(exigir_operacao)])
+def cancelar_revisao_desenho(
+    componente_id: str, id_tecnica_id: str, desenho_id: str,
+    session: Session = Depends(get_session),
+    usuario_atual: Usuario = Depends(obter_usuario_atual),
+):
+    _obter_componente(session, componente_id)
+    id_tecnica = session.get(IDTecnica, id_tecnica_id)
+    desenho = session.get(Desenho, desenho_id)
+    if not id_tecnica or id_tecnica.componente_id != componente_id or not desenho or desenho.id_tecnica_id != id_tecnica_id:
+        raise HTTPException(status_code=404, detail="Desenho não encontrado nesta ID.")
+    revisao = session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.desenho_origem_id == desenho_id,
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+    )).first()
+    if not revisao:
+        raise HTTPException(status_code=409, detail="Este desenho não possui revisão aberta.")
+    revisao.status = StatusRevisaoDesenhoEnum.CANCELADA
+    revisao.cancelada_por = usuario_atual.nome
+    revisao.cancelada_em = datetime.utcnow()
+    session.add(revisao)
+    registrar_historico(
+        session, componente_id, usuario_atual.nome, "Revisão de desenho cancelada",
+        f"Retorno do desenho '{desenho.codigo}' da ID '{id_tecnica.numero}' cancelado.",
+    )
+    session.commit()
+    return {"message": "Revisão do desenho cancelada."}
+
+
 @router.delete("/{id_tecnica_id}", dependencies=[Depends(exigir_operacao)])
 def excluir_folha_id(
     componente_id: str,
@@ -334,6 +486,16 @@ def excluir_folha_id(
 
     caminho_arquivo = Path(id_tecnica.arquivo_caminho) if id_tecnica.arquivo_caminho else None
     desenhos = session.exec(select(Desenho).where(Desenho.id_tecnica_id == id_tecnica.id)).all()
+    ids_desenhos = [desenho.id for desenho in desenhos]
+    revisoes_abertas = session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.desenho_origem_id.in_(ids_desenhos),
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+    )).all() if ids_desenhos else []
+    if revisoes_abertas:
+        raise HTTPException(
+            status_code=409,
+            detail="Esta ID possui desenho(s) em revisão. Cancele as revisões individuais antes de excluir a ID.",
+        )
     anexos = session.exec(
         select(Anexo).where(
             Anexo.componente_id == componente_id,

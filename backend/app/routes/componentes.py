@@ -1,6 +1,7 @@
 from app.models import (
     Componente, Fluxo, Etapa, Historico, Usuario, Pendencia, Equipamento,
-    PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, StatusEquipamentoEnum, IDTecnica, Desenho
+    PrioridadeEnum, StatusComponenteEnum, StatusEtapaEnum, StatusEquipamentoEnum,
+    IDTecnica, Desenho, RevisaoDesenho, StatusRevisaoDesenhoEnum
 )
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
@@ -70,6 +71,12 @@ def listar_todos_componentes(
         query = query.where(Componente.status == status)
         
     componentes = session.exec(query).all()
+    revisoes_abertas = session.exec(select(RevisaoDesenho).where(
+        RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO
+    )).all()
+    revisoes_por_componente = {}
+    for revisao in revisoes_abertas:
+        revisoes_por_componente[revisao.componente_id] = revisoes_por_componente.get(revisao.componente_id, 0) + 1
     
     result = []
     for c in componentes:
@@ -98,6 +105,7 @@ def listar_todos_componentes(
             "data_prevista": c.data_prevista,
             "data_conclusao": c.data_conclusao,
             "observacoes": c.observacoes,
+            "desenhos_em_revisao": revisoes_por_componente.get(c.id, 0),
             "etapa_atual_id": c.etapa_atual_id,
             "etapa_atual_nome": etapa_atual.nome if etapa_atual else "N/A",
             "etapa_atual_ordem": etapa_atual.ordem if etapa_atual else 0,
@@ -127,6 +135,14 @@ def obter_componente_detalhe(
     ids_tecnicas = session.exec(
         select(IDTecnica).where(IDTecnica.componente_id == c.id)
     ).all()
+    revisoes_desenhos = session.exec(
+        select(RevisaoDesenho).where(RevisaoDesenho.componente_id == c.id)
+    ).all()
+    revisoes_abertas = {
+        revisao.desenho_origem_id: revisao
+        for revisao in revisoes_desenhos
+        if revisao.status == StatusRevisaoDesenhoEnum.EM_REVISAO
+    }
     
     ids_detalhado = []
     substituicoes = {id_tec.substitui_id: id_tec for id_tec in ids_tecnicas if id_tec.substitui_id}
@@ -157,7 +173,22 @@ def obter_componente_detalhe(
             "tamanho_original": id_tec.tamanho_original,
             "tamanho_armazenado": id_tec.tamanho_armazenado,
             "motivo_revisao": id_tec.motivo_revisao,
-            "desenhos": desenhos
+            "desenhos": [
+                {
+                    **desenho.model_dump(),
+                    "revisao_individual": (
+                        {
+                            "id": revisoes_abertas[desenho.id].id,
+                            "status": revisoes_abertas[desenho.id].status,
+                            "motivo": revisoes_abertas[desenho.id].motivo,
+                            "retornada_por": revisoes_abertas[desenho.id].retornada_por,
+                            "retornada_em": revisoes_abertas[desenho.id].retornada_em,
+                        }
+                        if desenho.id in revisoes_abertas else None
+                    ),
+                }
+                for desenho in desenhos
+            ]
         })
         
     historico = session.exec(
@@ -183,6 +214,7 @@ def obter_componente_detalhe(
         "etapa_atual_id": c.etapa_atual_id,
         "etapas": etapas,
         "ids_tecnicas": ids_detalhado,
+        "desenhos_em_revisao": len(revisoes_abertas),
         "historico": historico
     }
 
