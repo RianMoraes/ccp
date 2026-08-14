@@ -104,21 +104,34 @@
             return ({ em_producao: "Em produção", concluido: "Concluído", carregado: "Carregado", carregado_com_pendencia: "Carregado com pendência" })[status] || String(status || "").replaceAll("_", " ");
         }
 
+        function statusVisualEquipamento(status) {
+            const mapa = {
+                em_producao: { badge: "bg-blue-50 text-blue-700 border-blue-200", borda: "border-l-blue-600", fundo: "bg-white" },
+                concluido: { badge: "bg-green-50 text-green-700 border-green-200", borda: "border-l-green-500", fundo: "bg-green-50/30" },
+                carregado: { badge: "bg-green-600 text-white border-green-600", borda: "border-l-green-600", fundo: "bg-green-50/40" },
+                carregado_com_pendencia: { badge: "bg-purple-100 text-purple-800 border-purple-300", borda: "border-l-purple-600", fundo: "bg-purple-50/40" },
+                cancelado: { badge: "bg-slate-100 text-slate-600 border-slate-200", borda: "border-l-slate-400", fundo: "bg-slate-50" }
+            };
+            return mapa[status] || mapa.em_producao;
+        }
+
         function cartaoEquipamento(eq, semPlanejamento = false) {
             const podeOperar = window.CCP_ACESSO?.podeOperar;
+            const visual = statusVisualEquipamento(eq.status);
+            const encerrado = ["carregado", "concluido"].includes(eq.status);
             const seletor = podeOperar ? `
                 <label class="block" onclick="event.stopPropagation()">
                     <span class="block text-[9px] font-bold uppercase text-slate-400 mb-1">${semPlanejamento ? "Definir início" : "Alterar início"}</span>
                     <input type="month" value="${eq.data_inicio ? eq.data_inicio.slice(0, 7) : ''}" onchange="alterarInicioPlanejamento('${eq.id}', this.value)" class="w-full px-2 py-1 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700">
                 </label>` : "";
             return `
-                <article onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'" class="bg-white rounded-xl border ${semPlanejamento ? 'border-amber-200' : 'border-slate-200'} p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow space-y-3">
+                <article onclick="window.location.href='equipamento-detalhe.html?id=${eq.id}'" class="${visual.fundo} rounded-xl border-l-4 ${visual.borda} border-t border-r border-b ${semPlanejamento ? 'border-t-amber-200 border-r-amber-200 border-b-amber-200' : 'border-t-slate-200 border-r-slate-200 border-b-slate-200'} p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow space-y-3 ${encerrado ? 'opacity-80' : ''}">
                     <div class="flex justify-between items-start gap-3">
                         <div class="min-w-0">
                             <h4 class="font-bold text-sm text-slate-800 leading-tight">${escapeHtml(eq.nome)}</h4>
                             <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(eq.cliente_nome || "Cliente não informado")}</p>
                         </div>
-                        <span class="shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-50 text-blue-900">${escapeHtml(statusTexto(eq.status))}</span>
+                        <span class="shrink-0 px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${visual.badge}">${escapeHtml(statusTexto(eq.status))}</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-[10px]">
                         <div><span class="block text-slate-400">OP</span><strong class="text-slate-700">${escapeHtml(eq.op || "N/A")}</strong></div>
