@@ -724,7 +724,7 @@
                         ${(id.desenhos || []).map(d => `
                             <div class="grid grid-cols-[120px_1fr_65px] gap-2 items-start px-2 py-1.5 border-t border-slate-100 text-[10px]">
                                 <span class="font-bold font-mono text-slate-800 break-all">${escapeHtml(d.codigo)}${d.revisao ? ' ' + escapeHtml(d.revisao) : ''}</span>
-                                <button class="text-left text-slate-500 truncate hover:text-slate-800" title="${escapeHtml(d.descricao || '')}" onclick="this.classList.toggle('truncate'); this.classList.toggle('whitespace-normal')">${escapeHtml(d.descricao || '')}</button>
+                                <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${escapeHtml(d.descricao || '')}</button>
                                 <span class="font-bold text-slate-700 text-right">${d.quantidade}${d.unidade ? ' ' + escapeHtml(d.unidade) : ''}</span>
                             </div>`).join("")}
                     </div>
@@ -739,6 +739,15 @@
             if (!conteudo || !icone) return;
             const recolhido = conteudo.classList.toggle("hidden");
             icone.textContent = recolhido ? "chevron_right" : "expand_more";
+        };
+
+        window.alternarDescricaoDesenho = function(elemento) {
+            const expandida = elemento.dataset.expandida === "true";
+            elemento.dataset.expandida = String(!expandida);
+            elemento.style.whiteSpace = expandida ? "nowrap" : "normal";
+            elemento.style.overflow = expandida ? "hidden" : "visible";
+            elemento.style.textOverflow = expandida ? "ellipsis" : "clip";
+            elemento.style.overflowWrap = expandida ? "normal" : "anywhere";
         };
 
         window.excluirFolhaID = async function(idTecnicaId, numero) {

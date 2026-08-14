@@ -662,10 +662,10 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                     </div>
                     <div id="id-tecnica-conteudo-${id.id}" class="hidden px-3 pb-3 space-y-1">
                         ${id.desenhos.map(d => `
-                            <div class="flex justify-between text-[11px] bg-white border border-slate-100 rounded p-1.5">
-                                <span class="font-bold font-mono text-slate-800">${d.codigo}</span>
-                                <span class="text-slate-500 max-w-[200px] truncate">${d.descricao || ''}</span>
-                                <span class="font-bold text-slate-700">Qtd: ${d.quantidade}</span>
+                            <div class="grid grid-cols-[minmax(90px,120px)_minmax(0,1fr)_auto] gap-2 items-start text-[11px] bg-white border border-slate-100 rounded p-1.5">
+                                <span class="font-bold font-mono text-slate-800 break-all">${d.codigo}</span>
+                                <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${d.descricao || ''}</button>
+                                <span class="font-bold text-slate-700 whitespace-nowrap">Qtd: ${d.quantidade}</span>
                             </div>
                         `).join("")}
                     </div>
@@ -679,6 +679,15 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
             if (!conteudo || !icone) return;
             const recolhido = conteudo.classList.toggle("hidden");
             icone.textContent = recolhido ? "chevron_right" : "expand_more";
+        };
+
+        window.alternarDescricaoDesenho = function(elemento) {
+            const expandida = elemento.dataset.expandida === "true";
+            elemento.dataset.expandida = String(!expandida);
+            elemento.style.whiteSpace = expandida ? "nowrap" : "normal";
+            elemento.style.overflow = expandida ? "hidden" : "visible";
+            elemento.style.textOverflow = expandida ? "ellipsis" : "clip";
+            elemento.style.overflowWrap = expandida ? "normal" : "anywhere";
         };
 
         document.getElementById("drawer-btn-fechar").addEventListener("click", () => {
