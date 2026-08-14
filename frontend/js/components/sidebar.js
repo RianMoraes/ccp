@@ -76,6 +76,8 @@ function aplicarModoConsulta(podeOperar) {
         "[onclick*='abrirModalComponente']", "[onclick*='excluirEquipamento']",
         "[onclick*='excluirComponente']", "[onclick*='cancelarPendencia']",
         "[onclick*='retornarIDRevisao']", "[onclick*='abrirImportacaoFolhaID']",
+        "[onclick*='retornarDesenhoRevisao']", "[onclick*='abrirImportacaoRevisaoDesenho']",
+        "[onclick*='cancelarRevisaoDesenho']",
         "[onclick*='excluirFolhaID']", "[onclick*='deletarCliente']",
         "[onclick*='deletarUsuario']", "[onclick*='deletarModelo']",
         "[onclick*='removerEtapaInput']", "[onchange*='alterarPrazo']"
