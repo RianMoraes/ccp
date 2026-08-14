@@ -40,14 +40,39 @@ def sincronizar_status_equipamento(session: Session, equipamento_id: str):
 
     todos_completos = bool(componentes) and all(c.percentual >= 100 for c in componentes)
 
+    def componente_alcancou_montagem(componente):
+        if not componente.etapa_atual_id:
+            return False
+        etapa_atual = session.get(Etapa, componente.etapa_atual_id)
+        if not etapa_atual:
+            return False
+        etapas_fluxo = session.exec(
+            select(Etapa).where(Etapa.fluxo_id == etapa_atual.fluxo_id).order_by(Etapa.ordem)
+        ).all()
+        etapa_montagem = next(
+            (etapa for etapa in etapas_fluxo if "montagem" in etapa.nome.casefold()),
+            None,
+        )
+        return bool(etapa_montagem and etapa_atual.ordem >= etapa_montagem.ordem)
+
+    todos_na_montagem = bool(componentes) and all(
+        componente_alcancou_montagem(componente) for componente in componentes
+    )
+
     if todos_completos and equipamento.status != StatusEquipamentoEnum.CARREGADO:
         equipamento.status = StatusEquipamentoEnum.CARREGADO
         session.add(equipamento)
-    elif not todos_completos and equipamento.status in (
+    elif equipamento.status in (
         StatusEquipamentoEnum.CARREGADO,
         StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA,
     ):
         equipamento.status = StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA
+        session.add(equipamento)
+    elif todos_na_montagem:
+        equipamento.status = StatusEquipamentoEnum.CONCLUIDO
+        session.add(equipamento)
+    elif equipamento.status == StatusEquipamentoEnum.CONCLUIDO:
+        equipamento.status = StatusEquipamentoEnum.EM_PRODUCAO
         session.add(equipamento)
 
 @router.get("")
