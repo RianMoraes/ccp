@@ -93,6 +93,9 @@ def obter_resumo_dashboard(session: Session = Depends(get_session)):
 
 @app.get("/api/dashboard/prioridade-dia", tags=["Dashboard"])
 def obter_prioridade_dia(session: Session = Depends(get_session)):
+    hoje = date.today()
+    limite_prioridade = hoje + timedelta(days=7)
+
     """Retorna as prioridades do dia (RF-01) - equipamentos com prazo mais próximo."""
     prioritarios = session.exec(
         select(Equipamento).where(
@@ -100,7 +103,9 @@ def obter_prioridade_dia(session: Session = Depends(get_session)):
             Equipamento.status.in_([
                 StatusEquipamentoEnum.EM_PRODUCAO,
                 StatusEquipamentoEnum.CARREGADO_COM_PENDENCIA,
-            ])
+            ]),
+            Equipamento.data_entrega != None,
+            Equipamento.data_entrega <= limite_prioridade,
         ).order_by(Equipamento.data_entrega).limit(5)
     ).all()
 
@@ -123,12 +128,13 @@ def obter_prioridade_dia(session: Session = Depends(get_session)):
 
         dias_restantes = 0
         if prioritario.data_entrega:
-            dias_restantes = max((prioritario.data_entrega - date.today()).days, 0)
+            dias_restantes = max((prioritario.data_entrega - hoje).days, 0)
 
         resultado.append({
             "id": prioritario.id,
             "nome": prioritario.nome,
             "op": prioritario.op,
+            "rv": prioritario.rv,
             "dias_prazo": dias_restantes,
             "bloqueio": bloqueio_critico,
             "bloqueado": possui_bloqueio
