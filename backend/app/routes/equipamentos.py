@@ -274,3 +274,22 @@ def atualizar_prazo_equipamento(
     session.commit()
     session.refresh(eq)
     return {"id": eq.id, "data_entrega": eq.data_entrega, "message": "Prazo atualizado com sucesso"}
+
+@router.patch("/{equipamento_id}/inicio", dependencies=[Depends(exigir_operacao)])
+def atualizar_inicio_equipamento(
+    equipamento_id: str,
+    nova_data: date,
+    session: Session = Depends(get_session),
+    usuario_atual: Usuario = Depends(obter_usuario_atual)
+):
+    """Atualiza o mês planejado de início, armazenado no primeiro dia do mês."""
+    eq = session.get(Equipamento, equipamento_id)
+    if not eq or not eq.ativo:
+        raise HTTPException(status_code=404, detail="Equipamento não encontrado")
+
+    eq.data_inicio = nova_data.replace(day=1)
+    eq.atualizado_em = datetime.utcnow()
+    session.add(eq)
+    session.commit()
+    session.refresh(eq)
+    return {"id": eq.id, "data_inicio": eq.data_inicio, "message": "Mês de início atualizado com sucesso"}
