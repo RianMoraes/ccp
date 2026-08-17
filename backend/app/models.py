@@ -225,6 +225,7 @@ class Desenho(SQLModel, table=True):
     item: Optional[int] = Field(default=None)
     pagina_origem: Optional[int] = Field(default=None)
     quantidade_original: Optional[str] = Field(default=None)
+    recebido: bool = Field(default=True)
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     
     id_tecnica: IDTecnica = Relationship(back_populates="desenhos")

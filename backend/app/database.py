@@ -69,6 +69,7 @@ def _aplicar_migracoes_sqlite():
             "item": "INTEGER",
             "pagina_origem": "INTEGER",
             "quantidade_original": "VARCHAR",
+            "recebido": "BOOLEAN NOT NULL DEFAULT 1",
         },
     }
 
