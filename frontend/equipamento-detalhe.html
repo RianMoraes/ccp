@@ -716,6 +716,7 @@
             container.innerHTML = botaoImportar + idsOrdenadas.map(id => {
                 const status = id.status || "liberada";
                 const totalDesenhosRevisao = (id.desenhos || []).filter(d => d.revisao_individual).length;
+                const totalDesenhosFaltantes = (id.desenhos || []).filter(d => d.recebido === false).length;
                 const statusTexto = { liberada: "Liberada", em_revisao: "Em revisão", revisada: "Versão anterior", substituida: "Substituída", cancelada: "Cancelada" }[status] || status;
                 const statusClasse = status === "em_revisao" ? "bg-red-100 text-red-700" : ['revisada', 'substituida'].includes(status) ? "bg-slate-200 text-slate-600" : "bg-green-100 text-green-700";
                 return `
@@ -728,6 +729,7 @@
                                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${statusClasse}">${statusTexto}</span>
                                 <span class="text-[9px] text-slate-400 font-bold">V${id.versao || 1}</span>
                                 ${totalDesenhosRevisao ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">${totalDesenhosRevisao} desenho(s) em revisão</span>` : ''}
+                                ${totalDesenhosFaltantes ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700">${totalDesenhosFaltantes} não veio/vieram</span>` : ''}
                             </button>
                             <p class="text-[10px] text-slate-400 mt-0.5">OP ${escapeHtml(id.op || 'N/A')} · RV ${escapeHtml(id.rv || 'N/A')}</p>
                             ${id.arquivo_compactado && id.tamanho_original ? `<p class="text-[9px] text-emerald-700 mt-0.5">PDF otimizado · ${formatarTamanho(id.tamanho_original)} → ${formatarTamanho(id.tamanho_armazenado)}</p>` : ''}
@@ -744,20 +746,23 @@
                     ${id.substituida_por_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substituída pela ID <strong>${escapeHtml(id.substituida_por_numero)}</strong></p>` : ''}
                     ${id.substitui_numero ? `<p class="text-[10px] text-purple-700 bg-purple-50 border border-purple-100 rounded p-2">Substitui a ID <strong>${escapeHtml(id.substitui_numero)}</strong></p>` : ''}
                     <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                        <div class="grid grid-cols-[120px_1fr_65px_76px] gap-2 px-2 py-1.5 bg-slate-100 text-[9px] font-bold uppercase text-slate-500">
-                            <span>Desenho</span><span>Descrição</span><span class="text-right">Qtd.</span><span class="text-right">Ações</span>
+                        <div class="grid grid-cols-[120px_1fr_55px_72px_76px] gap-2 px-2 py-1.5 bg-slate-100 text-[9px] font-bold uppercase text-slate-500">
+                            <span>Desenho</span><span>Descrição</span><span class="text-right">Qtd.</span><span class="text-center">Recebido</span><span class="text-right">Ações</span>
                         </div>
                         ${(id.desenhos || []).map(d => `
-                            <div class="grid grid-cols-[120px_1fr_65px_76px] gap-2 items-start px-2 py-1.5 border-t ${d.revisao_individual ? 'border-amber-200 bg-amber-50' : 'border-slate-100'} text-[10px]">
+                            <div class="grid grid-cols-[120px_1fr_55px_72px_76px] gap-2 items-start px-2 py-1.5 border-t ${d.recebido === false ? 'border-red-200 bg-red-50' : d.revisao_individual ? 'border-amber-200 bg-amber-50' : 'border-slate-100'} text-[10px]">
                                 <span class="font-bold font-mono text-slate-800 break-all">${escapeHtml(d.codigo)}${d.revisao ? ' ' + escapeHtml(d.revisao) : ''}</span>
                                 <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${escapeHtml(d.descricao || '')}</button>
                                 <span class="font-bold text-slate-700 text-right">${d.quantidade}${d.unidade ? ' ' + escapeHtml(d.unidade) : ''}</span>
+                                ${window.CCP_ACESSO?.podeOperar
+                                    ? `<button onclick="alterarRecebimentoDesenho('${id.id}', '${d.id}', ${d.recebido !== false})" title="Alternar conferência" class="px-1 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</button>`
+                                    : `<span class="px-1 py-0.5 rounded text-center text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</span>`}
                                 <span class="flex justify-end gap-1">
                                     ${d.revisao_individual
                                         ? `<button onclick="abrirImportacaoRevisaoDesenho('${d.revisao_individual.id}', '${id.id}', '${escapeHtml(id.numero)}', '${escapeHtml(d.codigo)}')" title="Importar revisão do desenho" class="text-purple-700 hover:bg-purple-100 rounded"><span class="material-symbols-outlined text-[16px]">upload_file</span></button><button onclick="cancelarRevisaoDesenho('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Cancelar retorno" class="text-slate-500 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[16px]">undo</span></button>`
                                         : status === 'liberada' ? `<button onclick="retornarDesenhoRevisao('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Retornar somente este desenho para revisão" class="text-amber-700 hover:bg-amber-100 rounded"><span class="material-symbols-outlined text-[16px]">assignment_return</span></button>` : ''}
                                 </span>
-                                ${d.revisao_individual ? `<span class="col-span-4 text-[10px] text-amber-800"><strong>Em revisão:</strong> ${escapeHtml(d.revisao_individual.motivo)} · ${escapeHtml(d.revisao_individual.retornada_por)}</span>` : ''}
+                                ${d.revisao_individual ? `<span class="col-span-5 text-[10px] text-amber-800"><strong>Em revisão:</strong> ${escapeHtml(d.revisao_individual.motivo)} · ${escapeHtml(d.revisao_individual.retornada_por)}</span>` : ''}
                             </div>`).join("")}
                     </div>
                     </div>
@@ -780,6 +785,20 @@
             elemento.style.overflow = expandida ? "hidden" : "visible";
             elemento.style.textOverflow = expandida ? "ellipsis" : "clip";
             elemento.style.overflowWrap = expandida ? "normal" : "anywhere";
+        };
+
+        window.alterarRecebimentoDesenho = async function(idTecnicaId, desenhoId, recebidoAtual) {
+            try {
+                await API.alterarRecebimentoDesenho(activeComponentId, idTecnicaId, desenhoId, !recebidoAtual);
+                await carregarEquipamento();
+                await abrirDrawerComponente(activeComponentId);
+                ativarTab("desenhos");
+                document.getElementById(`id-tecnica-conteudo-${idTecnicaId}`)?.classList.remove("hidden");
+                const icone = document.getElementById(`id-tecnica-icone-${idTecnicaId}`);
+                if (icone) icone.textContent = "expand_more";
+            } catch (err) {
+                alert(err.message);
+            }
         };
 
         window.excluirFolhaID = async function(idTecnicaId, numero) {
@@ -880,11 +899,12 @@
             const inputNumeroID = document.querySelector('[data-folha-campo="numero_id"]');
             inputNumeroID?.addEventListener("input", atualizarConfirmacaoSubstituicao);
             document.getElementById("folha-id-desenhos").innerHTML = dados.desenhos.map((desenho, indice) => `
-                <div class="grid grid-cols-[150px_1fr_90px] gap-2 p-2 folha-id-linha" data-indice="${indice}">
-                    ${folhaIDRevisaoDesenhoAlvo ? `<label class="col-span-3 flex items-center gap-2 px-2 py-1 rounded ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'bg-green-50 text-green-800' : 'bg-slate-50 text-slate-600'} text-[10px] font-bold cursor-pointer"><input type="radio" name="desenho-substituto" value="${indice}" ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'checked' : ''}> Usar este desenho como revisão de ${escapeHtml(folhaIDRevisaoDesenhoAlvo.codigo)}</label>` : ''}
+                <div class="grid grid-cols-[150px_1fr_90px_90px] gap-2 p-2 folha-id-linha" data-indice="${indice}">
+                    ${folhaIDRevisaoDesenhoAlvo ? `<label class="col-span-4 flex items-center gap-2 px-2 py-1 rounded ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'bg-green-50 text-green-800' : 'bg-slate-50 text-slate-600'} text-[10px] font-bold cursor-pointer"><input type="radio" name="desenho-substituto" value="${indice}" ${String(desenho.codigo).toUpperCase() === folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase() ? 'checked' : ''}> Usar este desenho como revisão de ${escapeHtml(folhaIDRevisaoDesenhoAlvo.codigo)}</label>` : ''}
                     <input value="${escapeHtml(desenho.codigo)}${desenho.revisao ? ' ' + escapeHtml(desenho.revisao) : ''}" class="folha-codigo min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] font-mono font-bold">
                     <textarea rows="1" class="folha-descricao min-w-0 px-2 py-1 border border-slate-200 rounded text-[11px] resize-y" title="Arraste para aumentar">${escapeHtml(desenho.descricao || '')}</textarea>
                     <div class="flex items-center gap-1"><input type="number" min="1" value="${desenho.quantidade}" class="folha-quantidade w-12 px-1 py-1 border border-slate-200 rounded text-[11px] text-right"><span class="text-[10px] text-slate-500">${escapeHtml(desenho.unidade || '')}</span></div>
+                    <label class="flex items-center justify-center gap-1 px-1 py-1 rounded bg-green-50 text-[10px] font-bold text-green-800 cursor-pointer" title="Desmarque se o desenho listado não veio com a ID"><input type="checkbox" class="folha-recebido" ${desenho.recebido === false ? '' : 'checked'}> Veio</label>
                 </div>`).join("");
             document.getElementById("folha-id-previa").classList.remove("hidden");
             document.getElementById("btn-confirmar-folha-id").disabled = false;
@@ -946,7 +966,8 @@
                     codigo: revisaoEncontrada ? codigoCompleto.slice(0, revisaoEncontrada.index).trim() : codigoCompleto,
                     revisao: revisaoEncontrada ? revisaoEncontrada[1].toUpperCase() : original.revisao,
                     descricao: linha.querySelector(".folha-descricao").value.trim(),
-                    quantidade: Number(linha.querySelector(".folha-quantidade").value) || 1
+                    quantidade: Number(linha.querySelector(".folha-quantidade").value) || 1,
+                    recebido: linha.querySelector(".folha-recebido").checked
                 };
             });
             if (folhaIDRevisaoDesenhoAlvo) {
@@ -1026,12 +1047,23 @@
         document.getElementById("btn-cancelar-folha-id").addEventListener("click", fecharImportacaoFolhaID);
 
         // Fechar Gaveta
-        document.getElementById("drawer-btn-fechar").addEventListener("click", () => {
+        window.fecharDrawerComponente = function() {
             const drawer = document.getElementById("drawer-componente");
+            if (!drawer || drawer.classList.contains("hidden")) return;
             drawer.classList.add("translate-x-full");
             setTimeout(() => {
                 drawer.classList.add("hidden");
             }, 300);
+        };
+
+        document.getElementById("drawer-btn-fechar").addEventListener("click", window.fecharDrawerComponente);
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") window.fecharDrawerComponente();
+        });
+        document.addEventListener("pointerdown", event => {
+            const drawer = document.getElementById("drawer-componente");
+            const aberto = drawer && !drawer.classList.contains("hidden") && !drawer.classList.contains("translate-x-full");
+            if (aberto && !drawer.contains(event.target)) window.fecharDrawerComponente();
         });
 
         // Controles de Abas na Gaveta
