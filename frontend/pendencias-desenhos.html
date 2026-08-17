@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendências de Desenhos - CCP Industrial</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="sidebar-container"></div>
+    <div id="header-container"></div>
+
+    <main class="ml-64 p-6 min-h-screen mt-20">
+        <div class="max-w-[1600px] mx-auto w-full space-y-6">
+            <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4 pb-4 border-b border-slate-200">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-700 uppercase">Pendências de Desenhos</h2>
+                    <p class="text-xs text-slate-400 font-medium mt-1">Conferência central de desenhos não recebidos e retornados para revisão</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <input id="filtro-busca" type="search" placeholder="Desenho, ID, OP, equipamento..." class="w-72 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white shadow-sm">
+                    <select id="filtro-situacao" class="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white shadow-sm">
+                        <option value="todas">Todas as situações</option>
+                        <option value="nao_recebido">Não recebidos</option>
+                        <option value="em_revisao">Em revisão</option>
+                        <option value="ambas">Não recebido e em revisão</option>
+                    </select>
+                    <select id="filtro-equipamento" class="max-w-64 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white shadow-sm">
+                        <option value="">Todos os equipamentos</option>
+                    </select>
+                    <select id="filtro-responsavel" class="max-w-56 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white shadow-sm">
+                        <option value="">Todos os responsáveis</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-slate-400">Pendências únicas</span>
+                    <p id="kpi-total" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                </div>
+                <div class="bg-red-50 rounded-xl border border-red-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-red-700">Desenhos não recebidos</span>
+                    <p id="kpi-nao-recebidos" class="text-2xl font-bold text-red-900 mt-1">0</p>
+                </div>
+                <div class="bg-amber-50 rounded-xl border border-amber-200 p-4 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase text-amber-700">Desenhos em revisão</span>
+                    <p id="kpi-em-revisao" class="text-2xl font-bold text-amber-900 mt-1">0</p>
+                </div>
+            </div>
+
+            <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <h3 class="text-xs font-bold uppercase text-slate-600">Ocorrências abertas</h3>
+                    <span id="total-filtrado" class="text-[10px] font-bold text-slate-400">0 resultados</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[1050px] text-left">
+                        <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="px-4 py-3">Desenho / descrição</th>
+                                <th class="px-4 py-3">Situação</th>
+                                <th class="px-4 py-3">ID</th>
+                                <th class="px-4 py-3">Equipamento / componente</th>
+                                <th class="px-4 py-3">OP / RV</th>
+                                <th class="px-4 py-3">Responsável</th>
+                                <th class="px-4 py-3">Tempo</th>
+                                <th class="px-4 py-3 text-right">Acesso</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-pendencias" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="estado-vazio" class="hidden p-10 text-center text-xs text-slate-400">Nenhuma pendência encontrada com os filtros selecionados.</div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module">
+        import { API } from "./js/api.js";
+        import { renderSidebar } from "./js/components/sidebar.js";
+        import { renderHeader } from "./js/components/header.js";
+
+        renderSidebar("pendencias-desenhos");
+        renderHeader("Pendências de Desenhos");
+
+        let itens = [];
+        const busca = document.getElementById("filtro-busca");
+        const situacao = document.getElementById("filtro-situacao");
+        const equipamento = document.getElementById("filtro-equipamento");
+        const responsavel = document.getElementById("filtro-responsavel");
+
+        function escapeHtml(valor) {
+            return String(valor ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
+        }
+
+        function referenciaData(item) {
+            const datas = [
+                item.recebido === false ? item.conferencia_atualizada_em : null,
+                item.em_revisao ? item.retornada_em : null
+            ].filter(Boolean).map(data => new Date(data));
+            return datas.length ? new Date(Math.min(...datas)) : null;
+        }
+
+        function tempoAberto(item) {
+            const data = referenciaData(item);
+            if (!data || Number.isNaN(data.getTime())) return "N/A";
+            const dias = Math.max(0, Math.floor((Date.now() - data.getTime()) / 86400000));
+            if (dias === 0) return "Hoje";
+            return dias === 1 ? "1 dia" : `${dias} dias`;
+        }
+
+        function responsaveisItem(item) {
+            return [...new Set([item.retornada_por, item.conferencia_atualizada_por].filter(Boolean))];
+        }
+
+        function preencherFiltros() {
+            const equipamentos = [...new Map(itens.map(item => [item.equipamento_id, item.equipamento_nome])).entries()]
+                .sort((a, b) => a[1].localeCompare(b[1]));
+            equipamento.innerHTML = '<option value="">Todos os equipamentos</option>' + equipamentos
+                .map(([id, nome]) => `<option value="${escapeHtml(id)}">${escapeHtml(nome)}</option>`).join("");
+            const nomes = [...new Set(itens.flatMap(responsaveisItem))].sort((a, b) => a.localeCompare(b));
+            responsavel.innerHTML = '<option value="">Todos os responsáveis</option>' + nomes
+                .map(nome => `<option value="${escapeHtml(nome)}">${escapeHtml(nome)}</option>`).join("");
+        }
+
+        function aplicarFiltros() {
+            const termo = busca.value.trim().toLocaleLowerCase("pt-BR");
+            const tipo = situacao.value;
+            const filtrados = itens.filter(item => {
+                const texto = [item.codigo, item.descricao, item.id_numero, item.equipamento_nome, item.componente_nome, item.cliente_nome, item.op, item.rv]
+                    .join(" ").toLocaleLowerCase("pt-BR");
+                const confereSituacao = tipo === "todas"
+                    || (tipo === "nao_recebido" && item.recebido === false)
+                    || (tipo === "em_revisao" && item.em_revisao)
+                    || (tipo === "ambas" && item.recebido === false && item.em_revisao);
+                return (!termo || texto.includes(termo))
+                    && confereSituacao
+                    && (!equipamento.value || item.equipamento_id === equipamento.value)
+                    && (!responsavel.value || responsaveisItem(item).includes(responsavel.value));
+            });
+            renderizar(filtrados);
+        }
+
+        function renderizar(lista) {
+            const corpo = document.getElementById("lista-pendencias");
+            document.getElementById("total-filtrado").innerText = `${lista.length} ${lista.length === 1 ? 'resultado' : 'resultados'}`;
+            document.getElementById("estado-vazio").classList.toggle("hidden", lista.length > 0);
+            corpo.innerHTML = lista.map(item => {
+                const link = `equipamento-detalhe.html?id=${encodeURIComponent(item.equipamento_id)}&componente_id=${encodeURIComponent(item.componente_id)}&aba=desenhos&id_tecnica_id=${encodeURIComponent(item.id_tecnica_id)}`;
+                const nomes = responsaveisItem(item);
+                return `<tr class="hover:bg-slate-50 align-top">
+                    <td class="px-4 py-3 max-w-md">
+                        <p class="text-xs font-bold font-mono text-slate-800">${escapeHtml(item.codigo)}</p>
+                        <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">${escapeHtml(item.descricao || 'Sem descrição')}</p>
+                        <span class="text-[9px] text-slate-400">Qtd. ${item.quantidade}${item.unidade ? ' ' + escapeHtml(item.unidade) : ''}</span>
+                    </td>
+                    <td class="px-4 py-3 space-y-1">
+                        ${item.recebido === false ? '<span class="block w-max px-2 py-1 rounded bg-red-100 text-red-700 text-[9px] font-bold">NÃO VEIO</span>' : ''}
+                        ${item.em_revisao ? '<span class="block w-max px-2 py-1 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">EM REVISÃO</span>' : ''}
+                        ${item.motivo_revisao ? `<p class="max-w-48 text-[9px] text-amber-700" title="${escapeHtml(item.motivo_revisao)}">${escapeHtml(item.motivo_revisao)}</p>` : ''}
+                    </td>
+                    <td class="px-4 py-3"><p class="text-xs font-bold text-blue-950">${escapeHtml(item.id_numero)}</p><span class="text-[9px] text-slate-400">Versão ${item.id_versao}</span></td>
+                    <td class="px-4 py-3"><p class="text-xs font-bold text-slate-700">${escapeHtml(item.equipamento_nome)}</p><p class="text-[10px] text-slate-500 mt-1">${escapeHtml(item.componente_nome)}</p><span class="text-[9px] text-slate-400">${escapeHtml(item.cliente_nome || '')}</span></td>
+                    <td class="px-4 py-3 text-[10px] font-mono text-slate-600"><p>OP ${escapeHtml(item.op || 'N/A')}</p><p class="mt-1">RV ${escapeHtml(item.rv || 'N/A')}</p></td>
+                    <td class="px-4 py-3 text-[10px] text-slate-600">${nomes.length ? nomes.map(escapeHtml).join('<br>') : 'N/A'}</td>
+                    <td class="px-4 py-3"><span class="text-[10px] font-bold ${tempoAberto(item) === 'Hoje' ? 'text-slate-600' : 'text-red-700'}">${tempoAberto(item)}</span></td>
+                    <td class="px-4 py-3 text-right"><a href="${link}" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-[10px] font-bold"><span class="material-symbols-outlined text-[14px]">open_in_new</span>Abrir ID</a></td>
+                </tr>`;
+            }).join("");
+        }
+
+        async function carregar() {
+            try {
+                const dados = await API.getPendenciasDesenhos();
+                itens = dados.itens || [];
+                document.getElementById("kpi-total").innerText = dados.total || 0;
+                document.getElementById("kpi-nao-recebidos").innerText = dados.nao_recebidos || 0;
+                document.getElementById("kpi-em-revisao").innerText = dados.em_revisao || 0;
+                preencherFiltros();
+                aplicarFiltros();
+            } catch (erro) {
+                document.getElementById("lista-pendencias").innerHTML = `<tr><td colspan="8" class="p-8 text-center text-xs text-red-600">${escapeHtml(erro.message)}</td></tr>`;
+            }
+        }
+
+        [busca, situacao, equipamento, responsavel].forEach(campo => campo.addEventListener(campo === busca ? "input" : "change", aplicarFiltros));
+        carregar();
+    </script>
+</body>
+</html>
