@@ -143,6 +143,8 @@ async def confirmar_importacao(
             raise HTTPException(status_code=400, detail="Selecione qual desenho recebido resolve a revisão.")
         if indice_substituto < 0 or indice_substituto >= len(desenhos):
             raise HTTPException(status_code=400, detail="O desenho selecionado para a revisão é inválido.")
+        if desenhos[indice_substituto].get("recebido") is False:
+            raise HTTPException(status_code=409, detail="Um desenho marcado como nao recebido nao pode resolver uma revisao.")
         codigo_substituto = str(desenhos[indice_substituto].get("codigo") or "").strip()
         if codigo_substituto.casefold() != desenho_origem.codigo.casefold() and dados.get("confirma_substituicao_desenho") is not True:
             raise HTTPException(
@@ -408,6 +410,8 @@ def retornar_desenho_para_revisao(
         raise HTTPException(status_code=404, detail="ID técnica não encontrada.")
     if not desenho or desenho.id_tecnica_id != id_tecnica_id:
         raise HTTPException(status_code=404, detail="Desenho não encontrado nesta ID.")
+    if desenho.recebido is False:
+        raise HTTPException(status_code=409, detail="Um desenho que nao veio nao pode retornar para revisao. Marque-o como 'Veio' antes de continuar.")
     if id_tecnica.status != StatusIDTecnicaEnum.LIBERADA:
         raise HTTPException(status_code=409, detail="Somente desenhos da ID liberada atual podem retornar para revisão.")
     existente = session.exec(select(RevisaoDesenho).where(
@@ -477,6 +481,14 @@ def alterar_recebimento_desenho(
         raise HTTPException(status_code=404, detail="Desenho nao encontrado nesta ID.")
     if not isinstance(dados.get("recebido"), bool):
         raise HTTPException(status_code=400, detail="Informe se o desenho veio ou nao veio.")
+
+    if dados["recebido"] is False:
+        revisao_aberta = session.exec(select(RevisaoDesenho).where(
+            RevisaoDesenho.desenho_origem_id == desenho_id,
+            RevisaoDesenho.status == StatusRevisaoDesenhoEnum.EM_REVISAO,
+        )).first()
+        if revisao_aberta:
+            raise HTTPException(status_code=409, detail="Um desenho em revisao nao pode ser marcado como 'Nao veio'. Cancele ou conclua a revisao primeiro.")
 
     desenho.recebido = dados["recebido"]
     desenho.conferencia_atualizada_em = datetime.utcnow()
