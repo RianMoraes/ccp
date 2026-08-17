@@ -503,6 +503,7 @@
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${sv.cls}">${sv.label}</span>
                         ${c.status === "bloqueado" ? '<span class="material-symbols-outlined text-red-500 text-[16px] animate-pulse">block</span>' : ''}
                         ${c.desenhos_em_revisao ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800" title="Aviso não bloqueante">${c.desenhos_em_revisao} desenho(s) em revisão</span>` : ''}
+                        ${c.desenhos_nao_recebidos ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700" title="Aviso não bloqueante">${c.desenhos_nao_recebidos} ${c.desenhos_nao_recebidos === 1 ? 'desenho não veio' : 'desenhos não vieram'}</span>` : ''}
                     </div>
                     <div class="text-[11px] text-slate-500">
                         Etapa Atual: <span class="font-bold text-slate-700">${c.etapa_atual_nome || 'N/A'}</span>
@@ -729,7 +730,7 @@
                                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${statusClasse}">${statusTexto}</span>
                                 <span class="text-[9px] text-slate-400 font-bold">V${id.versao || 1}</span>
                                 ${totalDesenhosRevisao ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">${totalDesenhosRevisao} desenho(s) em revisão</span>` : ''}
-                                ${totalDesenhosFaltantes ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700">${totalDesenhosFaltantes} não veio/vieram</span>` : ''}
+                                ${totalDesenhosFaltantes ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700">${totalDesenhosFaltantes} ${totalDesenhosFaltantes === 1 ? 'desenho não veio' : 'desenhos não vieram'}</span>` : ''}
                             </button>
                             <p class="text-[10px] text-slate-400 mt-0.5">OP ${escapeHtml(id.op || 'N/A')} · RV ${escapeHtml(id.rv || 'N/A')}</p>
                             ${id.arquivo_compactado && id.tamanho_original ? `<p class="text-[9px] text-emerald-700 mt-0.5">PDF otimizado · ${formatarTamanho(id.tamanho_original)} → ${formatarTamanho(id.tamanho_armazenado)}</p>` : ''}
@@ -754,13 +755,13 @@
                                 <span class="font-bold font-mono text-slate-800 break-all">${escapeHtml(d.codigo)}${d.revisao ? ' ' + escapeHtml(d.revisao) : ''}</span>
                                 <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${escapeHtml(d.descricao || '')}</button>
                                 <span class="font-bold text-slate-700 text-right">${d.quantidade}${d.unidade ? ' ' + escapeHtml(d.unidade) : ''}</span>
-                                ${window.CCP_ACESSO?.podeOperar
+                                ${window.CCP_ACESSO?.podeOperar && !d.revisao_individual
                                     ? `<button onclick="alterarRecebimentoDesenho('${id.id}', '${d.id}', ${d.recebido !== false})" title="Alternar conferência" class="px-1 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</button>`
                                     : `<span class="px-1 py-0.5 rounded text-center text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</span>`}
                                 <span class="flex justify-end gap-1">
                                     ${d.revisao_individual
                                         ? `<button onclick="abrirImportacaoRevisaoDesenho('${d.revisao_individual.id}', '${id.id}', '${escapeHtml(id.numero)}', '${escapeHtml(d.codigo)}')" title="Importar revisão do desenho" class="text-purple-700 hover:bg-purple-100 rounded"><span class="material-symbols-outlined text-[16px]">upload_file</span></button><button onclick="cancelarRevisaoDesenho('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Cancelar retorno" class="text-slate-500 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[16px]">undo</span></button>`
-                                        : status === 'liberada' ? `<button onclick="retornarDesenhoRevisao('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Retornar somente este desenho para revisão" class="text-amber-700 hover:bg-amber-100 rounded"><span class="material-symbols-outlined text-[16px]">assignment_return</span></button>` : ''}
+                                        : status === 'liberada' && d.recebido !== false ? `<button onclick="retornarDesenhoRevisao('${id.id}', '${d.id}', '${escapeHtml(d.codigo)}')" title="Retornar somente este desenho para revisão" class="text-amber-700 hover:bg-amber-100 rounded"><span class="material-symbols-outlined text-[16px]">assignment_return</span></button>` : ''}
                                 </span>
                                 ${d.revisao_individual ? `<span class="col-span-5 text-[10px] text-amber-800"><strong>Em revisão:</strong> ${escapeHtml(d.revisao_individual.motivo)} · ${escapeHtml(d.revisao_individual.retornada_por)}</span>` : ''}
                             </div>`).join("")}
@@ -974,6 +975,7 @@
                 const selecionado = document.querySelector('input[name="desenho-substituto"]:checked');
                 if (!selecionado) return mostrarEstadoFolhaID("Selecione qual desenho recebido resolve a revisão.", true);
                 const indice = Number(selecionado.value);
+                if (folhaIDDados.desenhos[indice]?.recebido === false) return mostrarEstadoFolhaID("O desenho selecionado para resolver a revisão está marcado como não recebido.", true);
                 const codigoNovo = folhaIDDados.desenhos[indice]?.codigo || "";
                 const codigoDiferente = codigoNovo.toUpperCase() !== folhaIDRevisaoDesenhoAlvo.codigo.toUpperCase();
                 if (codigoDiferente && !confirm(`Confirmar que o desenho ${codigoNovo} substitui ${folhaIDRevisaoDesenhoAlvo.codigo}?`)) return;

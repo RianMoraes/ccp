@@ -519,7 +519,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
 
                         return `
                         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="abrirDrawerComponente('${c.id}')">
-                            <td class="px-4 py-3 text-xs font-bold text-slate-800">${c.nome}${c.desenhos_em_revisao ? `<span class="block mt-1 text-[9px] text-amber-700">${c.desenhos_em_revisao} desenho(s) em revisão</span>` : ''}</td>
+                            <td class="px-4 py-3 text-xs font-bold text-slate-800">${c.nome}${c.desenhos_em_revisao ? `<span class="block mt-1 text-[9px] text-amber-700">${c.desenhos_em_revisao} desenho(s) em revisão</span>` : ''}${c.desenhos_nao_recebidos ? `<span class="block mt-1 text-[9px] text-red-700">${c.desenhos_nao_recebidos} ${c.desenhos_nao_recebidos === 1 ? 'desenho não veio' : 'desenhos não vieram'}</span>` : ''}</td>
                             <td class="px-4 py-3 text-xs text-slate-600">${c.etapa_atual ? c.etapa_atual.nome : 'Listagem'}</td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor}">
@@ -664,7 +664,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                         <button onclick="alternarIDTecnica('${id.id}')" class="flex items-center gap-1.5 text-left hover:text-blue-900" title="Expandir ou recolher ID">
                             <span id="id-tecnica-icone-${id.id}" class="material-symbols-outlined text-[17px] text-slate-500">chevron_right</span>
                             ${(id.desenhos || []).filter(d => d.revisao_individual).length ? `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px]">${id.desenhos.filter(d => d.revisao_individual).length} desenho(s) em revisão</span>` : ''}
-                            ${(id.desenhos || []).filter(d => d.recebido === false).length ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px]">${id.desenhos.filter(d => d.recebido === false).length} não veio/vieram</span>` : ''}
+                            ${(id.desenhos || []).filter(d => d.recebido === false).length ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px]">${id.desenhos.filter(d => d.recebido === false).length} desenho(s) não recebido(s)</span>` : ''}
                             <span>ID Técnica: ${id.numero}</span>
                         </button>
                         <span class="text-[10px] text-slate-400 font-mono">OP: ${id.op || 'N/A'}</span>
@@ -675,7 +675,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
                                 <span class="font-bold font-mono text-slate-800 break-all">${d.codigo}</span>
                                 <button type="button" class="min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-slate-500 hover:text-slate-800" title="Clique para expandir ou recolher a descrição" onclick="alternarDescricaoDesenho(this)">${d.descricao || ''}</button>
                                 <span class="font-bold text-slate-700 whitespace-nowrap">Qtd: ${d.quantidade}</span>
-                                ${window.CCP_ACESSO?.podeOperar ? `<button onclick="alterarRecebimentoDesenho('${id.id}', '${d.id}', ${d.recebido !== false})" class="px-1.5 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</button>` : `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</span>`}
+                                ${window.CCP_ACESSO?.podeOperar && !d.revisao_individual ? `<button onclick="alterarRecebimentoDesenho('${id.id}', '${d.id}', ${d.recebido !== false})" class="px-1.5 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</button>` : `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${d.recebido === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${d.recebido === false ? 'NÃO VEIO' : 'VEIO'}</span>`}
                                 ${d.revisao_individual ? `<span class="col-span-4 text-[10px] text-amber-800"><strong>Em revisão:</strong> ${d.revisao_individual.motivo}</span>` : ''}
                             </div>
                         `).join("")}
@@ -704,6 +704,7 @@ document.getElementById("filtro-cliente").addEventListener("input", renderizarEq
         window.alterarRecebimentoDesenho = async function(idTecnicaId, desenhoId, recebidoAtual) {
             try {
                 await API.alterarRecebimentoDesenho(activeComponentId, idTecnicaId, desenhoId, !recebidoAtual);
+                await carregarEquipamentos();
                 await abrirDrawerComponente(activeComponentId);
                 document.getElementById(`id-tecnica-conteudo-${idTecnicaId}`)?.classList.remove("hidden");
                 const icone = document.getElementById(`id-tecnica-icone-${idTecnicaId}`);
