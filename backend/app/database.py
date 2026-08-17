@@ -82,6 +82,16 @@ def _aplicar_migracoes_sqlite():
             for nome, definicao in definicoes.items():
                 if nome not in existentes:
                     conexao.execute(text(f'ALTER TABLE "{tabela}" ADD COLUMN "{nome}" {definicao}'))
+        conexao.execute(text("""
+            UPDATE desenhos
+            SET recebido = 1,
+                conferencia_atualizada_em = COALESCE(conferencia_atualizada_em, CURRENT_TIMESTAMP),
+                conferencia_atualizada_por = COALESCE(conferencia_atualizada_por, 'Correcao automatica')
+            WHERE recebido = 0 AND id IN (
+                SELECT desenho_origem_id FROM revisoes_desenhos
+                WHERE status IN ('EM_REVISAO', 'em_revisao')
+            )
+        """))
 
 def get_session():
     """Dependency para injeção de sessão do banco de dados nas rotas do FastAPI."""
