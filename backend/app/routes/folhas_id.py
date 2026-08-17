@@ -248,6 +248,7 @@ async def confirmar_importacao(
                 item=desenho.get("item"),
                 pagina_origem=desenho.get("pagina_origem"),
                 quantidade_original=desenho.get("quantidade_original"),
+                recebido=desenho.get("recebido") is not False,
             )
             session.add(novo_desenho)
             session.flush()
@@ -457,6 +458,33 @@ def cancelar_revisao_desenho(
     )
     session.commit()
     return {"message": "Revisão do desenho cancelada."}
+
+
+@router.patch("/{id_tecnica_id}/desenhos/{desenho_id}/recebimento", dependencies=[Depends(exigir_operacao)])
+def alterar_recebimento_desenho(
+    componente_id: str, id_tecnica_id: str, desenho_id: str, dados: dict,
+    session: Session = Depends(get_session),
+    usuario_atual: Usuario = Depends(obter_usuario_atual),
+):
+    _obter_componente(session, componente_id)
+    id_tecnica = session.get(IDTecnica, id_tecnica_id)
+    desenho = session.get(Desenho, desenho_id)
+    if not id_tecnica or id_tecnica.componente_id != componente_id:
+        raise HTTPException(status_code=404, detail="ID tecnica nao encontrada.")
+    if not desenho or desenho.id_tecnica_id != id_tecnica_id:
+        raise HTTPException(status_code=404, detail="Desenho nao encontrado nesta ID.")
+    if not isinstance(dados.get("recebido"), bool):
+        raise HTTPException(status_code=400, detail="Informe se o desenho veio ou nao veio.")
+
+    desenho.recebido = dados["recebido"]
+    session.add(desenho)
+    situacao = "Veio" if desenho.recebido else "Nao veio"
+    registrar_historico(
+        session, componente_id, usuario_atual.nome, "Conferencia de desenho",
+        f"Desenho '{desenho.codigo}' da ID '{id_tecnica.numero}' marcado como '{situacao}'. O andamento do componente nao foi alterado.",
+    )
+    session.commit()
+    return {"message": f"Desenho marcado como '{situacao}'.", "recebido": desenho.recebido}
 
 
 @router.delete("/{id_tecnica_id}", dependencies=[Depends(exigir_operacao)])
