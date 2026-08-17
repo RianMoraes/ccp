@@ -23,6 +23,10 @@ export function renderSidebar(activeMenu = "dashboard") {
                 <span class="material-symbols-outlined">view_kanban</span>
                 <span class="font-body-md text-body-md">Kanban</span>
             </a>
+            <a id="menu-pendencias-desenhos" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ease-in-out ${activeMenu === 'pendencias-desenhos' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-500 hover:bg-slate-100'}" href="pendencias-desenhos.html">
+                <span class="material-symbols-outlined">rule</span>
+                <span class="font-body-md text-body-md">Pendências de Desenhos</span>
+            </a>
             <a id="menu-entregas" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 ease-in-out ${activeMenu === 'entregas' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-500 hover:bg-slate-100'}" href="entregas.html">
                 <span class="material-symbols-outlined">local_shipping</span>
                 <span class="font-body-md text-body-md">Entregas</span>
