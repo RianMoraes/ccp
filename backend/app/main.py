@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pathlib import Path
 from app.database import init_db
-from app.routes import auth, clientes, equipamentos, componentes, pendencias, export, busca, usuarios, modelos_fluxo, folhas_id
+from app.routes import auth, clientes, equipamentos, componentes, pendencias, export, busca, usuarios, modelos_fluxo, folhas_id, pendencias_desenhos
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import (
@@ -45,6 +45,7 @@ app.include_router(busca.router)
 app.include_router(usuarios.router)
 app.include_router(modelos_fluxo.router)
 app.include_router(folhas_id.router)
+app.include_router(pendencias_desenhos.router)
 
 # Servir o Frontend estático (pasta frontend/ ao lado da pasta backend/)
 # Acessível em http://localhost:8000/app/...
