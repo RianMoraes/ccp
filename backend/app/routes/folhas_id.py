@@ -249,6 +249,8 @@ async def confirmar_importacao(
                 pagina_origem=desenho.get("pagina_origem"),
                 quantidade_original=desenho.get("quantidade_original"),
                 recebido=desenho.get("recebido") is not False,
+                conferencia_atualizada_em=datetime.utcnow(),
+                conferencia_atualizada_por=usuario_atual.nome,
             )
             session.add(novo_desenho)
             session.flush()
@@ -477,6 +479,8 @@ def alterar_recebimento_desenho(
         raise HTTPException(status_code=400, detail="Informe se o desenho veio ou nao veio.")
 
     desenho.recebido = dados["recebido"]
+    desenho.conferencia_atualizada_em = datetime.utcnow()
+    desenho.conferencia_atualizada_por = usuario_atual.nome
     session.add(desenho)
     situacao = "Veio" if desenho.recebido else "Nao veio"
     registrar_historico(
