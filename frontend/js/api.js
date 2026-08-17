@@ -298,6 +298,15 @@ export const API = {
         return handleResponse(response);
     },
 
+    async alterarRecebimentoDesenho(componenteId, idTecnicaId, desenhoId, recebido) {
+        const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}/desenhos/${desenhoId}/recebimento`, {
+            method: "PATCH",
+            headers: getHeaders(),
+            body: JSON.stringify({ recebido })
+        });
+        return handleResponse(response);
+    },
+
     async excluirFolhaID(componenteId, idTecnicaId) {
         const response = await fetch(`${API_BASE_URL}/componentes/${componenteId}/folhas-id/${idTecnicaId}`, {
             method: "DELETE",
