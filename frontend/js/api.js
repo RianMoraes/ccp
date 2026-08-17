@@ -329,6 +329,13 @@ export const API = {
         });
         return handleResponse(response);
     },
+
+    async getPendenciasDesenhos() {
+        const response = await fetch(`${API_BASE_URL}/pendencias-desenhos`, {
+            headers: getHeaders()
+        });
+        return handleResponse(response);
+    },
     
     // Exportação Excel
     async exportarExcel() {
