@@ -73,6 +73,25 @@ def _aplicar_migracoes_sqlite():
             "conferencia_atualizada_em": "DATETIME",
             "conferencia_atualizada_por": "VARCHAR",
         },
+        "ordens_corte": {
+            "ordem_base": "VARCHAR",
+            "pagina": "INTEGER",
+            "total_paginas": "INTEGER",
+            "prioridade": "VARCHAR",
+            "data_insercao": "VARCHAR",
+            "tipo_registro": "VARCHAR",
+            "vinculo_rtb": "VARCHAR",
+            "liga": "VARCHAR",
+            "espessura": "VARCHAR",
+            "dimensao_x": "VARCHAR",
+            "dimensao_y": "VARCHAR",
+            "quantidade": "INTEGER",
+            "material_completo": "VARCHAR",
+            "corte_planilha": "VARCHAR",
+            "status_planilha": "VARCHAR",
+            "sincronizado_em": "DATETIME",
+            "presente_planilha": "BOOLEAN NOT NULL DEFAULT 1",
+        },
     }
 
     with engine.begin() as conexao:
@@ -91,6 +110,55 @@ def _aplicar_migracoes_sqlite():
                 SELECT desenho_origem_id FROM revisoes_desenhos
                 WHERE status IN ('EM_REVISAO', 'em_revisao')
             )
+        """))
+        # Versões anteriores importavam indevidamente a aba auxiliar de
+        # retrabalhos. Remove apenas esses registros legados, identificados
+        # pela chave própria, preservando ordens da aba principal e RTBs
+        # cadastrados manualmente.
+        conexao.execute(text("""
+            UPDATE ordens_corte
+            SET status = COALESCE(status_anterior, 'PROGRAMADO'),
+                status_anterior = NULL,
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE status = 'RETRABALHADO'
+              AND id IN (
+                  SELECT referencia.ordem_original_id
+                  FROM referencias_retrabalho_corte AS referencia
+                  JOIN ordens_corte AS retrabalho
+                    ON retrabalho.id = referencia.retrabalho_ordem_id
+                  WHERE retrabalho.chave_importacao LIKE 'excel-rtb:%'
+                    AND referencia.ordem_original_id IS NOT NULL
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM referencias_retrabalho_corte AS outra_referencia
+                  JOIN ordens_corte AS outro_retrabalho
+                    ON outro_retrabalho.id = outra_referencia.retrabalho_ordem_id
+                  WHERE outra_referencia.ordem_original_id = ordens_corte.id
+                    AND COALESCE(outro_retrabalho.chave_importacao, '') NOT LIKE 'excel-rtb:%'
+              )
+        """))
+        conexao.execute(text("""
+            DELETE FROM referencias_retrabalho_corte
+            WHERE retrabalho_ordem_id IN (
+                SELECT id FROM ordens_corte
+                WHERE chave_importacao LIKE 'excel-rtb:%'
+            )
+            OR ordem_original_id IN (
+                SELECT id FROM ordens_corte
+                WHERE chave_importacao LIKE 'excel-rtb:%'
+            )
+        """))
+        conexao.execute(text("""
+            DELETE FROM historicos_ordens_corte
+            WHERE ordem_corte_id IN (
+                SELECT id FROM ordens_corte
+                WHERE chave_importacao LIKE 'excel-rtb:%'
+            )
+        """))
+        conexao.execute(text("""
+            DELETE FROM ordens_corte
+            WHERE chave_importacao LIKE 'excel-rtb:%'
         """))
 
 def get_session():

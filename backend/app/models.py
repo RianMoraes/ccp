@@ -56,6 +56,18 @@ class StatusRevisaoDesenhoEnum(str, Enum):
     RESOLVIDA = "resolvida"
     CANCELADA = "cancelada"
 
+class TipoOrdemCorteEnum(str, Enum):
+    CORTE_FRIO = "corte_frio"
+    CNC = "cnc"
+
+class StatusOrdemCorteEnum(str, Enum):
+    PROGRAMADO = "programado"
+    EM_CORTE = "em_corte"
+    CONCLUIDO = "concluido"
+    BLOQUEADO = "bloqueado"
+    RETRABALHADO = "retrabalhado"
+    CANCELADO = "cancelado"
+
 # --- MODELOS ---
 
 class Cliente(SQLModel, table=True):
@@ -292,6 +304,76 @@ class Anexo(SQLModel, table=True):
     enviado_em: datetime = Field(default_factory=datetime.utcnow)
     
     componente: Componente = Relationship(back_populates="anexos")
+
+
+class OrdemCorte(SQLModel, table=True):
+    __tablename__ = "ordens_corte"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    numero: str = Field(index=True)
+    ordem_base: Optional[str] = Field(default=None, index=True)
+    pagina: Optional[int] = Field(default=None, index=True)
+    total_paginas: Optional[int] = Field(default=None)
+    tipo: TipoOrdemCorteEnum = Field(index=True)
+    prioridade: Optional[str] = Field(default=None, index=True)
+    data_insercao: Optional[str] = Field(default=None)
+    tipo_registro: Optional[str] = Field(default=None, index=True)
+    vinculo_rtb: Optional[str] = Field(default=None, index=True)
+    material_grupo: Optional[str] = Field(default=None, index=True)
+    material: Optional[str] = Field(default=None, index=True)
+    material_original: Optional[str] = Field(default=None)
+    liga: Optional[str] = Field(default=None, index=True)
+    espessura: Optional[str] = Field(default=None)
+    dimensao_x: Optional[str] = Field(default=None)
+    dimensao_y: Optional[str] = Field(default=None)
+    quantidade: Optional[int] = Field(default=None)
+    material_completo: Optional[str] = Field(default=None)
+    rv: Optional[str] = Field(default=None, index=True)
+    op: Optional[str] = Field(default=None, index=True)
+    equipamento_id: Optional[str] = Field(default=None, foreign_key="equipamentos.id", index=True)
+    componente_id: Optional[str] = Field(default=None, foreign_key="componentes.id", index=True)
+    equipamento_texto: Optional[str] = Field(default=None)
+    componente_texto: Optional[str] = Field(default=None)
+    status: StatusOrdemCorteEnum = Field(default=StatusOrdemCorteEnum.PROGRAMADO, index=True)
+    status_anterior: Optional[StatusOrdemCorteEnum] = Field(default=None)
+    data_corte: Optional[datetime] = Field(default=None)
+    maquina: Optional[str] = Field(default=None, index=True)
+    corte_planilha: Optional[str] = Field(default=None, index=True)
+    status_planilha: Optional[str] = Field(default=None, index=True)
+    observacoes: Optional[str] = Field(default=None)
+    motivo_bloqueio: Optional[str] = Field(default=None)
+    eh_retrabalho: bool = Field(default=False, index=True)
+    responsavel_retrabalho: Optional[str] = Field(default=None)
+    tempo_gasto_min: Optional[int] = Field(default=None)
+    origem: str = Field(default="manual")
+    linha_origem: Optional[int] = Field(default=None)
+    chave_importacao: Optional[str] = Field(default=None, index=True)
+    criado_por: Optional[str] = Field(default=None)
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    atualizado_em: datetime = Field(default_factory=datetime.utcnow)
+    sincronizado_em: Optional[datetime] = Field(default=None)
+    presente_planilha: bool = Field(default=True, index=True)
+
+
+class ReferenciaRetrabalhoCorte(SQLModel, table=True):
+    __tablename__ = "referencias_retrabalho_corte"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    retrabalho_ordem_id: str = Field(foreign_key="ordens_corte.id", index=True)
+    ordem_original_id: Optional[str] = Field(default=None, foreign_key="ordens_corte.id", index=True)
+    trabalho_original_texto: str = Field(index=True)
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+
+
+class HistoricoOrdemCorte(SQLModel, table=True):
+    __tablename__ = "historicos_ordens_corte"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    ordem_corte_id: str = Field(foreign_key="ordens_corte.id", index=True)
+    usuario: str = Field()
+    evento: str = Field()
+    descricao: str = Field()
+    data_hora: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Usuario(SQLModel, table=True):
